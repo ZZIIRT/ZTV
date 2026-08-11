@@ -30,6 +30,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
     private var directInputJob: Job? = null
     private var playGeneration = 0
     private var currentRetry = 0
+    private var consecutiveFailures = 0
 
     private val _uiState = MutableStateFlow(ZtvUiState())
     val uiState: StateFlow<ZtvUiState> = _uiState
@@ -247,13 +248,16 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun onPlayerReady() {
         timeoutJob?.cancel()
+        consecutiveFailures = 0
         _uiState.update { it.copy(statusMessage = null) }
     }
 
     private fun onPlaybackFailed(message: String) {
         timeoutJob?.cancel()
+        consecutiveFailures += 1
         val state = _uiState.value
-        if (state.settings.skipUnavailableChannels && state.visibleChannels.size > 1) {
+        val skipLimit = state.visibleChannels.size.coerceAtMost(MAX_CONSECUTIVE_SKIPS)
+        if (state.settings.skipUnavailableChannels && state.visibleChannels.size > 1 && consecutiveFailures < skipLimit) {
             showMessage("$message. Переключаю дальше")
             switchChannel(1)
         } else {
@@ -387,3 +391,5 @@ enum class SettingsItem {
     ShowNumbers,
     Close,
 }
+
+private const val MAX_CONSECUTIVE_SKIPS = 5
