@@ -2,9 +2,11 @@ package com.zziirt.ztv.ui
 
 import android.app.Application
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.zziirt.ztv.boot.BootLaunchScheduler
 import com.zziirt.ztv.channels.Channel
 import com.zziirt.ztv.channels.FavoriteOrder
 import com.zziirt.ztv.channels.FavoritesRepository
@@ -47,6 +49,8 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     init {
+        updateOverlayPermission()
+
         viewModelScope.launch {
             preferences.settings.collect { settings ->
                 _uiState.update {
@@ -63,6 +67,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onEnterForeground() {
+        updateOverlayPermission()
         viewModelScope.launch {
             val current = _uiState.value.currentChannel
             if (current != null && _uiState.value.settings.autoPlayLastChannel) {
@@ -418,6 +423,8 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
             SettingsItem.ClearFavorites -> viewModelScope.launch { preferences.clearFavorites() }
             SettingsItem.AutoPlay -> viewModelScope.launch { preferences.toggleAutoPlay() }
             SettingsItem.BootAutostart -> viewModelScope.launch { preferences.toggleBootAutostart() }
+            SettingsItem.OverlayAutostart -> openOverlaySettings()
+            SettingsItem.TestAutostart -> testOverlayAutostart()
             SettingsItem.ReliableAutostart -> openAccessibilitySettings()
             SettingsItem.SkipUnavailable -> viewModelScope.launch { preferences.toggleSkipUnavailable() }
             SettingsItem.Timeout -> viewModelScope.launch { preferences.cycleTimeout() }
@@ -425,6 +432,53 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
             SettingsItem.ShowLogos -> viewModelScope.launch { preferences.toggleShowLogos() }
             SettingsItem.ShowNumbers -> viewModelScope.launch { preferences.toggleShowNumbers() }
             SettingsItem.Close -> _uiState.update { it.copy(isSettingsOpen = false, isChannelListOpen = true) }
+        }
+    }
+
+    private fun updateOverlayPermission() {
+        val application = getApplication<Application>()
+        _uiState.update {
+            it.copy(overlayAutostartPermissionGranted = Settings.canDrawOverlays(application))
+        }
+    }
+
+    private fun openOverlaySettings() {
+        val application = getApplication<Application>()
+        val intent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:${application.packageName}"),
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        runCatching { application.startActivity(intent) }
+            .recoverCatching {
+                application.startActivity(
+                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    },
+                )
+            }
+            .onFailure { showMessage("Не удалось открыть разрешение поверх других приложений") }
+    }
+
+    private fun testOverlayAutostart() {
+        updateOverlayPermission()
+        if (!_uiState.value.overlayAutostartPermissionGranted) {
+            showMessage("Сначала включите системное разрешение автозапуска")
+            return
+        }
+
+        val application = getApplication<Application>()
+        _uiState.update { it.copy(isSettingsOpen = false, isChannelListOpen = false) }
+        viewModelScope.launch {
+            application.startActivity(
+                Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_HOME)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                },
+            )
+            delay(AUTOSTART_TEST_DELAY_MILLIS)
+            BootLaunchScheduler.launchNow(application)
         }
     }
 
@@ -509,6 +563,8 @@ enum class SettingsItem {
     ClearFavorites,
     AutoPlay,
     BootAutostart,
+    OverlayAutostart,
+    TestAutostart,
     ReliableAutostart,
     SkipUnavailable,
     Timeout,
@@ -520,3 +576,4 @@ enum class SettingsItem {
 
 private const val MAX_CONSECUTIVE_SKIPS = 5
 private const val PLAYBACK_RECOVERY_DELAY_MS = 250L
+private const val AUTOSTART_TEST_DELAY_MILLIS = 5_000L

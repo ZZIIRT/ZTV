@@ -3,11 +3,17 @@ package com.zziirt.ztv.ui
 import com.zziirt.ztv.channels.Channel
 import com.zziirt.ztv.preferences.AppSettings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class ZtvUiStateTest {
     private val one = Channel(1, "One", "https://example.com/one.m3u8", tvgId = "one")
     private val three = Channel(3, "Three", "https://example.com/three.m3u8", tvgId = "three")
+
+    @Test
+    fun `overlay autostart permission is disabled until Android grants it`() {
+        assertFalse(ZtvUiState().overlayAutostartPermissionGranted)
+    }
 
     @Test
     fun `channel list uses filtered channels outside reorder mode`() {

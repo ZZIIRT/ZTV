@@ -14,6 +14,7 @@ data class ZtvUiState(
     val isSettingsOpen: Boolean = false,
     val channelListIndex: Int = 0,
     val settingsIndex: Int = 0,
+    val overlayAutostartPermissionGranted: Boolean = false,
     val osdVisible: Boolean = false,
     val statusMessage: String? = "Загрузка каналов...",
     val directInput: String = "",
