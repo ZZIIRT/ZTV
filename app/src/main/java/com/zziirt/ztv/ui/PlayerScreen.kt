@@ -351,6 +351,7 @@ private fun settingsLabels(state: ZtvUiState): List<String> {
         "Очистить любимые",
         "Автоматически запускать последний канал: ${settings.autoPlayLastChannel.onOff()}",
         "Автозапуск после загрузки Android TV: ${settings.bootAutostart.onOff()}",
+        "Надёжный автозапуск: открыть Специальные возможности",
         "Пропускать неработающие каналы: ${settings.skipUnavailableChannels.onOff()}",
         "Таймаут подключения: ${settings.connectionTimeoutSeconds} сек.",
         "Размер текста: ${settings.textSizeMode.label}",

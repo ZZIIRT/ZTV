@@ -7,6 +7,13 @@ import org.junit.Test
 
 class BootLaunchPolicyTest {
     @Test
+    fun `accessibility fallback launches only shortly after device boot`() {
+        assertTrue(AccessibilityBootPolicy.shouldLaunch(0L))
+        assertTrue(AccessibilityBootPolicy.shouldLaunch(9 * 60_000L))
+        assertFalse(AccessibilityBootPolicy.shouldLaunch(10 * 60_000L + 1L))
+    }
+
+    @Test
     fun `boot autostart is enabled by default`() {
         assertTrue(AppSettings().bootAutostart)
     }

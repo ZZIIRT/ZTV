@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ZTV</string>
+    <string name="autostart_accessibility_label">ZTV Автозапуск</string>
+    <string name="autostart_accessibility_description">Открывает ZTV после загрузки телевизора. Не читает экран и нажатия.</string>
 </resources>

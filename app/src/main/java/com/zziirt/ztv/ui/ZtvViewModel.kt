@@ -1,6 +1,8 @@
 package com.zziirt.ztv.ui
 
 import android.app.Application
+import android.content.Intent
+import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.zziirt.ztv.channels.Channel
@@ -416,6 +418,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
             SettingsItem.ClearFavorites -> viewModelScope.launch { preferences.clearFavorites() }
             SettingsItem.AutoPlay -> viewModelScope.launch { preferences.toggleAutoPlay() }
             SettingsItem.BootAutostart -> viewModelScope.launch { preferences.toggleBootAutostart() }
+            SettingsItem.ReliableAutostart -> openAccessibilitySettings()
             SettingsItem.SkipUnavailable -> viewModelScope.launch { preferences.toggleSkipUnavailable() }
             SettingsItem.Timeout -> viewModelScope.launch { preferences.cycleTimeout() }
             SettingsItem.TextSize -> viewModelScope.launch { preferences.cycleTextSize() }
@@ -423,6 +426,14 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
             SettingsItem.ShowNumbers -> viewModelScope.launch { preferences.toggleShowNumbers() }
             SettingsItem.Close -> _uiState.update { it.copy(isSettingsOpen = false, isChannelListOpen = true) }
         }
+    }
+
+    private fun openAccessibilitySettings() {
+        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        runCatching { getApplication<Application>().startActivity(intent) }
+            .onFailure { showMessage("Не удалось открыть Специальные возможности") }
     }
 
     private fun startMovingFavorites() {
@@ -498,6 +509,7 @@ enum class SettingsItem {
     ClearFavorites,
     AutoPlay,
     BootAutostart,
+    ReliableAutostart,
     SkipUnavailable,
     Timeout,
     TextSize,

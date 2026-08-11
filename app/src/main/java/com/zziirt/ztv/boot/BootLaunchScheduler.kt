@@ -15,6 +15,10 @@ object BootLaunchScheduler {
 
     fun launch(context: Context) {
         scheduleFallback(context)
+        launchNow(context)
+    }
+
+    fun launchNow(context: Context) {
         runCatching { context.startActivity(launchIntent(context)) }
             .onFailure { error -> Log.w(TAG, "Immediate boot launch was blocked", error) }
     }
