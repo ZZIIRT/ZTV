@@ -23,3 +23,19 @@ https://tvc-hls.cdnvideo.ru/tvc-res/smil:vd9221.smil/playlist.m3u8
 https://zabava-htlive.cdn.ngenix.net/hls/CH_RENTV/variant.m3u8
 #EXTINF:-1 tvg-id="Spas.ru" tvg-logo="https://iptvx.one/picons/spas.png" group-title="Федеральные",СПАС
 https://zabava-htlive.cdn.ngenix.net/hls/CH_SPAS/variant.m3u8
+#EXTINF:-1 tvg-id="STS.ru" tvg-logo="https://iptvx.one/picons/sts.png" group-title="Федеральные",СТС
+https://zabava-htlive.cdn.ngenix.net/hls/CH_STS/variant.m3u8
+#EXTINF:-1 tvg-id="Domashniy.ru" tvg-logo="https://iptvx.one/picons/domashniy.png" group-title="Федеральные",Домашний
+https://zabava-htlive.cdn.ngenix.net/hls/CH_DOMASHNIY/variant.m3u8
+#EXTINF:-1 tvg-id="TV3.ru" tvg-logo="https://iptvx.one/picons/tv3.png" group-title="Федеральные",ТВ-3
+https://zabava-htlive.cdn.ngenix.net/hls/CH_TV3/variant.m3u8
+#EXTINF:-1 tvg-id="Friday.ru" tvg-logo="https://iptvx.one/picons/piatnica.png" group-title="Федеральные",Пятница
+https://zabava-htlive.cdn.ngenix.net/hls/CH_PYATNIZZA/variant.m3u8
+#EXTINF:-1 tvg-id="Zvezda.ru" tvg-logo="https://iptvx.one/picons/zvezda.png" group-title="Федеральные",Звезда
+https://tvchannelstream1.tvzvezda.ru/cdn/tvzvezda/playlist.m3u8
+#EXTINF:-1 tvg-id="Mir.ru" tvg-logo="https://iptvx.one/picons/mir.png" group-title="Федеральные",МИР
+https://zabava-htlive.cdn.ngenix.net/hls/CH_MIR/variant.m3u8
+#EXTINF:-1 tvg-id="TNT.ru" tvg-logo="https://iptvx.one/picons/tnt.png" group-title="Федеральные",ТНТ
+https://zabava-htlive.cdn.ngenix.net/hls/CH_TNT/variant.m3u8
+#EXTINF:-1 tvg-id="RBKTV.ru" tvg-logo="https://iptvx.one/picons/rbk.png" group-title="Федеральные",РБК
+https://online-video.rbc.ru/online2/rbctv.m3u8

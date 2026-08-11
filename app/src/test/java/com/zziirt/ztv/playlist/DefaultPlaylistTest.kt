@@ -27,9 +27,17 @@ class DefaultPlaylistTest {
                 "ТВ Центр",
                 "РЕН ТВ",
                 "СПАС",
+                "СТС",
+                "Домашний",
+                "ТВ-3",
+                "Пятница",
+                "Звезда",
+                "МИР",
+                "ТНТ",
+                "РБК",
             ),
             channels.map { it.name },
         )
-        assertEquals((1..12).toList(), channels.map { it.number })
+        assertEquals((1..20).toList(), channels.map { it.number })
     }
 }
