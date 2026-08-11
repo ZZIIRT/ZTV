@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.zziirt.ztv.channels.Channel
+import com.zziirt.ztv.channels.FavoriteOrder
 import com.zziirt.ztv.channels.FavoritesRepository
 import com.zziirt.ztv.player.PlayerController
 import com.zziirt.ztv.playlist.PlaylistRepository
@@ -47,7 +48,8 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
             preferences.settings.collect { settings ->
                 _uiState.update {
                     val visible = favoritesRepository.visibleChannels(it.channels, settings)
-                    it.copy(settings = settings, visibleChannels = visible)
+                    val updated = it.copy(settings = settings, visibleChannels = visible)
+                    updated.copy(channelListIndex = updated.channelListIndex.coerceIn(0, updated.channelListChannels().size))
                 }
             }
         }
@@ -91,8 +93,22 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onLeft() {
+        if (_uiState.value.isMovingFavorite) return
+        _uiState.update {
+            it.copy(
+                isSettingsOpen = true,
+                isChannelListOpen = false,
+                settingsIndex = 0,
+            )
+        }
+    }
+
+    fun onRight(): Boolean = onBack()
+
     fun onOk(longPress: Boolean = false) {
         when {
+            _uiState.value.isMovingFavorite -> confirmFavoriteOrder()
             longPress && _uiState.value.isChannelListOpen -> toggleFavoriteForMenu()
             longPress -> toggleCurrentFavorite()
             _uiState.value.isSettingsOpen -> activateSetting()
@@ -103,12 +119,30 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onBack(): Boolean {
         return when {
+            _uiState.value.isMovingFavorite -> {
+                _uiState.update {
+                    it.copy(
+                        isMovingFavorite = false,
+                        pendingFavoriteOrder = null,
+                        isChannelListOpen = false,
+                        isSettingsOpen = true,
+                        settingsIndex = SettingsItem.MoveFavorite.ordinal,
+                    )
+                }
+                true
+            }
             _uiState.value.isSettingsOpen -> {
                 _uiState.update { it.copy(isSettingsOpen = false, isChannelListOpen = true) }
                 true
             }
             _uiState.value.isChannelListOpen -> {
-                _uiState.update { it.copy(isChannelListOpen = false, isMovingFavorite = false) }
+                _uiState.update {
+                    it.copy(
+                        isChannelListOpen = false,
+                        isMovingFavorite = false,
+                        pendingFavoriteOrder = null,
+                    )
+                }
                 true
             }
             else -> false
@@ -180,7 +214,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun applyChannels(channels: List<Channel>, settings: AppSettings) {
         val visible = favoritesRepository.visibleChannels(channels, settings)
-        val current = chooseCurrentChannel(channels, settings)
+        val current = chooseCurrentChannel(channels, visible, settings)
         _uiState.update {
             it.copy(
                 channels = channels,
@@ -195,17 +229,29 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun chooseCurrentChannel(channels: List<Channel>, settings: AppSettings): Channel? {
-        return channels.firstOrNull { it.stableKey == settings.lastChannelKey } ?: channels.firstOrNull()
+    private fun chooseCurrentChannel(
+        channels: List<Channel>,
+        visibleChannels: List<Channel>,
+        settings: AppSettings,
+    ): Channel? {
+        val preferred = visibleChannels.ifEmpty { channels }
+        return preferred.firstOrNull { it.stableKey == settings.lastChannelKey } ?: preferred.firstOrNull()
     }
 
     private fun switchChannel(direction: Int) {
         val state = _uiState.value
         val current = state.currentChannel ?: return
-        val visible = state.visibleChannels.ifEmpty { state.channels }
-        if (visible.isEmpty()) return
-        val index = visible.indexOfFirst { it.stableKey == current.stableKey }.takeIf { it >= 0 } ?: 0
-        val targetIndex = (index + direction).floorMod(visible.size)
+        val visible = state.visibleChannels
+        if (visible.isEmpty()) {
+            showMessage("Нет любимых каналов")
+            return
+        }
+        val index = visible.indexOfFirst { it.stableKey == current.stableKey }
+        val targetIndex = if (index < 0) {
+            if (direction >= 0) 0 else visible.lastIndex
+        } else {
+            (index + direction).floorMod(visible.size)
+        }
         playChannel(visible[targetIndex])
     }
 
@@ -279,7 +325,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun openChannelList() {
         val state = _uiState.value
-        val visible = state.channels
+        val visible = state.visibleChannels
         val currentIndex = visible.indexOfFirst { it.stableKey == state.currentChannel?.stableKey }.coerceAtLeast(0)
         _uiState.update {
             it.copy(
@@ -287,6 +333,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
                 isSettingsOpen = false,
                 channelListIndex = currentIndex,
                 isMovingFavorite = false,
+                pendingFavoriteOrder = null,
             )
         }
     }
@@ -297,18 +344,23 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
             moveCurrentFavorite(direction)
             return
         }
-        val itemCount = state.channels.size + 1
+        val itemCount = state.channelListChannels().size + 1
         if (itemCount <= 0) return
         _uiState.update { it.copy(channelListIndex = (it.channelListIndex + direction).floorMod(itemCount)) }
     }
 
     private fun selectMenuItem() {
         val state = _uiState.value
-        if (state.channelListIndex >= state.channels.size) {
+        if (state.isMovingFavorite) {
+            confirmFavoriteOrder()
+            return
+        }
+        val channels = state.channelListChannels()
+        if (state.channelListIndex >= channels.size) {
             _uiState.update { it.copy(isSettingsOpen = true, isChannelListOpen = false, settingsIndex = 0) }
             return
         }
-        playChannel(state.channels[state.channelListIndex])
+        playChannel(channels[state.channelListIndex])
     }
 
     private fun toggleCurrentFavorite() {
@@ -321,7 +373,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
     }
     private fun toggleFavoriteForMenu() {
         val state = _uiState.value
-        val channel = state.channels.getOrNull(state.channelListIndex) ?: return
+        val channel = state.channelListChannels().getOrNull(state.channelListIndex) ?: return
         viewModelScope.launch {
             preferences.toggleFavorite(channel.stableKey)
             showMessage("Любимые обновлены")
@@ -330,11 +382,15 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun moveCurrentFavorite(direction: Int) {
         val state = _uiState.value
-        val channel = state.channels.getOrNull(state.channelListIndex) ?: return
-        if (channel.stableKey !in state.settings.favoriteKeys) return
-        viewModelScope.launch {
-            preferences.moveFavorite(channel.stableKey, direction)
-            showMessage("Порядок любимых изменён")
+        val channels = state.channelListChannels()
+        val channel = channels.getOrNull(state.channelListIndex) ?: return
+        val currentOrder = state.pendingFavoriteOrder ?: channels.map { it.stableKey }
+        val movedOrder = FavoriteOrder.move(currentOrder, channel.stableKey, direction)
+        _uiState.update {
+            it.copy(
+                pendingFavoriteOrder = movedOrder,
+                channelListIndex = movedOrder.indexOf(channel.stableKey).coerceAtLeast(0),
+            )
         }
     }
 
@@ -346,9 +402,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
         when (SettingsItem.entries[_uiState.value.settingsIndex]) {
             SettingsItem.FavoritesOnly -> viewModelScope.launch { preferences.toggleFavoritesOnly() }
             SettingsItem.RefreshNow -> refreshNow()
-            SettingsItem.MoveFavorite -> _uiState.update {
-                it.copy(isSettingsOpen = false, isChannelListOpen = true, isMovingFavorite = true)
-            }
+            SettingsItem.MoveFavorite -> startMovingFavorites()
             SettingsItem.ClearFavorites -> viewModelScope.launch { preferences.clearFavorites() }
             SettingsItem.AutoPlay -> viewModelScope.launch { preferences.toggleAutoPlay() }
             SettingsItem.BootAutostart -> viewModelScope.launch { preferences.toggleBootAutostart() }
@@ -358,6 +412,43 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
             SettingsItem.ShowLogos -> viewModelScope.launch { preferences.toggleShowLogos() }
             SettingsItem.ShowNumbers -> viewModelScope.launch { preferences.toggleShowNumbers() }
             SettingsItem.Close -> _uiState.update { it.copy(isSettingsOpen = false, isChannelListOpen = true) }
+        }
+    }
+
+    private fun startMovingFavorites() {
+        val favorites = favoritesRepository.orderedFavorites(_uiState.value.channels, _uiState.value.settings)
+        if (favorites.isEmpty()) {
+            showMessage("Сначала добавьте любимые каналы долгим нажатием OK")
+            return
+        }
+        val currentIndex = favorites.indexOfFirst { it.stableKey == _uiState.value.currentChannel?.stableKey }
+            .coerceAtLeast(0)
+        _uiState.update {
+            it.copy(
+                isSettingsOpen = false,
+                isChannelListOpen = true,
+                isMovingFavorite = true,
+                pendingFavoriteOrder = favorites.map { channel -> channel.stableKey },
+                channelListIndex = currentIndex,
+            )
+        }
+    }
+
+    private fun confirmFavoriteOrder() {
+        val order = _uiState.value.pendingFavoriteOrder ?: return
+        _uiState.update {
+            it.copy(
+                settings = it.settings.copy(favoriteOrder = order),
+                isMovingFavorite = false,
+                pendingFavoriteOrder = null,
+                isChannelListOpen = false,
+                isSettingsOpen = true,
+                settingsIndex = SettingsItem.MoveFavorite.ordinal,
+            )
+        }
+        viewModelScope.launch {
+            preferences.setFavoriteOrder(order)
+            showMessage("Порядок любимых сохранён")
         }
     }
 

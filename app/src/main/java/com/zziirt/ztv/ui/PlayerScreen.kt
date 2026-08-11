@@ -148,7 +148,7 @@ private fun StatusMessage(message: String, scale: Float) {
 private fun ChannelListOverlay(state: ZtvUiState) {
     val listState = rememberLazyListState()
     val scale = state.settings.textSizeMode.scale
-    val channels = state.channels
+    val channels = state.channelListChannels()
 
     LaunchedEffect(state.channelListIndex) {
         listState.animateScrollToItem(state.channelListIndex.coerceAtLeast(0))
@@ -163,13 +163,17 @@ private fun ChannelListOverlay(state: ZtvUiState) {
                 .padding(horizontal = 18.dp, vertical = 22.dp),
         ) {
             Text(
-                text = "Каналы",
+                text = if (state.isMovingFavorite) "Порядок любимых" else "Каналы",
                 color = Color.White,
                 fontSize = 30.sp * scale,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = if (state.settings.favoritesOnly) "Переключение: только любимые" else "Переключение: все каналы",
+                text = when {
+                    state.isMovingFavorite -> "Любимые каналы: ${channels.size}"
+                    state.settings.favoritesOnly -> "Переключение: только любимые"
+                    else -> "Переключение: все каналы"
+                },
                 color = Color(0xFFCCCCCC),
                 fontSize = 18.sp * scale,
             )
@@ -178,6 +182,18 @@ private fun ChannelListOverlay(state: ZtvUiState) {
                 modifier = Modifier.weight(1f),
                 state = listState,
             ) {
+                if (channels.isEmpty()) {
+                    item(key = "empty") {
+                        Text(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 18.dp),
+                            text = "Любимых каналов пока нет",
+                            color = Color(0xFFCCCCCC),
+                            fontSize = 24.sp * scale,
+                        )
+                    }
+                }
                 itemsIndexed(channels, key = { _, channel -> channel.stableKey }) { index, channel ->
                     ChannelRow(
                         channel = channel,
@@ -188,8 +204,10 @@ private fun ChannelListOverlay(state: ZtvUiState) {
                         moving = state.isMovingFavorite && index == state.channelListIndex,
                     )
                 }
-                item(key = "settings") {
-                    SettingsRow(selected = state.channelListIndex == channels.size, scale = scale)
+                if (!state.isMovingFavorite) {
+                    item(key = "settings") {
+                        SettingsRow(selected = state.channelListIndex == channels.size, scale = scale)
+                    }
                 }
             }
         }
@@ -271,21 +289,33 @@ private fun SettingsRow(selected: Boolean, scale: Float) {
 private fun SettingsOverlay(state: ZtvUiState) {
     val scale = state.settings.textSizeMode.scale
     val items = settingsLabels(state)
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(state.settingsIndex) {
+        listState.animateScrollToItem(state.settingsIndex + 1)
+    }
+
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .width(720.dp)
+                .fillMaxHeight(0.92f)
                 .background(Color(0xF2000000))
                 .padding(28.dp),
+            state = listState,
         ) {
-            Text(
-                text = "Настройки",
-                color = Color.White,
-                fontSize = 34.sp * scale,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(20.dp))
-            items.forEachIndexed { index, label ->
+            item(key = "header") {
+                Column {
+                    Text(
+                        text = "Настройки",
+                        color = Color.White,
+                        fontSize = 34.sp * scale,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(Modifier.height(20.dp))
+                }
+            }
+            itemsIndexed(items, key = { index, _ -> SettingsItem.entries[index].name }) { index, label ->
                 val selected = index == state.settingsIndex
                 Text(
                     modifier = Modifier

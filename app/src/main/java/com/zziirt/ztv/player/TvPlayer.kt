@@ -43,8 +43,9 @@ class TvPlayer(context: Context) {
     }
 
     fun playLive(channel: Channel, playbackId: Long) {
-        val streamType = StreamTypeResolver.resolve(channel.url)
-        val mediaItem = createMediaItem(channel, playbackId, streamType)
+        val resolvedUrl = StreamUrlResolver.resolve(channel.url)
+        val streamType = StreamTypeResolver.resolve(resolvedUrl)
+        val mediaItem = createMediaItem(resolvedUrl, playbackId, streamType)
         val mediaSource = createMediaSource(mediaItem, streamType)
         exoPlayer.stop()
         exoPlayer.setMediaSource(mediaSource, true)
@@ -77,9 +78,9 @@ class TvPlayer(context: Context) {
 
     fun isReady(): Boolean = exoPlayer.playbackState == Player.STATE_READY
 
-    private fun createMediaItem(channel: Channel, playbackId: Long, streamType: StreamType): MediaItem =
+    private fun createMediaItem(url: String, playbackId: Long, streamType: StreamType): MediaItem =
         MediaItem.Builder()
-            .setUri(channel.url)
+            .setUri(url)
             .setMediaId(playbackId.toString())
             .setMimeType(
                 when (streamType) {
@@ -104,7 +105,7 @@ class TvPlayer(context: Context) {
         }
 
     private companion object {
-        const val USER_AGENT = "Mozilla/5.0 (Linux; Android TV) AppleWebKit/537.36 ZTV/0.1.2"
+        const val USER_AGENT = "Mozilla/5.0 (Linux; Android TV) AppleWebKit/537.36 ZTV/0.1.3"
     }
 }
 

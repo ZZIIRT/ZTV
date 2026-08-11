@@ -20,9 +20,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event)
-        return when (event.keyCode) {
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        return when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP -> {
                 viewModel.onUp()
                 true
@@ -30,6 +29,13 @@ class MainActivity : ComponentActivity() {
             KeyEvent.KEYCODE_DPAD_DOWN -> {
                 viewModel.onDown()
                 true
+            }
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                viewModel.onLeft()
+                true
+            }
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (viewModel.onRight()) true else super.onKeyDown(keyCode, event)
             }
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER,
@@ -46,13 +52,13 @@ class MainActivity : ComponentActivity() {
                 true
             }
             KeyEvent.KEYCODE_BACK -> {
-                if (viewModel.onBack()) true else super.dispatchKeyEvent(event)
+                if (viewModel.onBack()) true else super.onKeyDown(keyCode, event)
             }
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
-                viewModel.onDigit(event.keyCode - KeyEvent.KEYCODE_0)
+                viewModel.onDigit(keyCode - KeyEvent.KEYCODE_0)
                 true
             }
-            else -> super.dispatchKeyEvent(event)
+            else -> super.onKeyDown(keyCode, event)
         }
     }
 }

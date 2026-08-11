@@ -1,6 +1,7 @@
 package com.zziirt.ztv.ui
 
 import com.zziirt.ztv.channels.Channel
+import com.zziirt.ztv.channels.FavoritesRepository
 import com.zziirt.ztv.preferences.AppSettings
 
 data class ZtvUiState(
@@ -17,4 +18,18 @@ data class ZtvUiState(
     val statusMessage: String? = "Загрузка каналов...",
     val directInput: String = "",
     val isMovingFavorite: Boolean = false,
+    val pendingFavoriteOrder: List<String>? = null,
 )
+
+private val channelListFavoritesRepository = FavoritesRepository()
+
+fun ZtvUiState.channelListChannels(): List<Channel> =
+    if (isMovingFavorite) {
+        channelListFavoritesRepository.orderedFavorites(
+            channels = channels,
+            settings = settings,
+            order = pendingFavoriteOrder ?: settings.favoriteOrder,
+        )
+    } else {
+        visibleChannels
+    }

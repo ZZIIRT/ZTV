@@ -31,7 +31,9 @@ class M3uParser {
                                 logoUrl = info.logoUrl,
                                 groupTitle = info.groupTitle,
                             )
-                            channelsByKey.putIfAbsent(channel.stableKey, channel)
+                            if (channel.stableKey !in channelsByKey) {
+                                channelsByKey[channel.stableKey] = channel
+                            }
                         }
                         pendingInfo = null
                     }

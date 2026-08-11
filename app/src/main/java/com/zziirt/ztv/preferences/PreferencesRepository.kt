@@ -63,20 +63,10 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
-    suspend fun moveFavorite(channelKey: String, direction: Int) {
+    suspend fun setFavoriteOrder(order: List<String>) {
         context.dataStore.edit { prefs ->
-            val order = prefs[Keys.favoriteOrder]
-                ?.split(LIST_SEPARATOR)
-                ?.filter { it.isNotBlank() }
-                ?.toMutableList()
-                ?: mutableListOf()
-            val index = order.indexOf(channelKey)
-            val target = (index + direction).coerceIn(0, order.lastIndex)
-            if (index >= 0 && index != target) {
-                val value = order.removeAt(index)
-                order.add(target, value)
-                prefs[Keys.favoriteOrder] = order.joinToString(LIST_SEPARATOR)
-            }
+            val favorites = prefs[Keys.favoriteKeys] ?: emptySet()
+            prefs[Keys.favoriteOrder] = order.filter { it in favorites }.joinToString(LIST_SEPARATOR)
         }
     }
 

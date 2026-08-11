@@ -5,13 +5,16 @@ import com.zziirt.ztv.preferences.AppSettings
 class FavoritesRepository {
     fun visibleChannels(channels: List<Channel>, settings: AppSettings): List<Channel> {
         if (!settings.favoritesOnly) return channels
-        val favorites = orderedFavorites(channels, settings)
-        return favorites.ifEmpty { channels }
+        return orderedFavorites(channels, settings)
     }
 
-    fun orderedFavorites(channels: List<Channel>, settings: AppSettings): List<Channel> {
+    fun orderedFavorites(
+        channels: List<Channel>,
+        settings: AppSettings,
+        order: List<String> = settings.favoriteOrder,
+    ): List<Channel> {
         val byKey = channels.associateBy { it.stableKey }
-        val ordered = settings.favoriteOrder.mapNotNull { byKey[it] }
+        val ordered = order.mapNotNull { byKey[it] }.filter { it.stableKey in settings.favoriteKeys }
         val orderedKeys = ordered.map { it.stableKey }.toSet()
         val remaining = channels.filter { it.stableKey in settings.favoriteKeys && it.stableKey !in orderedKeys }
         return ordered + remaining
