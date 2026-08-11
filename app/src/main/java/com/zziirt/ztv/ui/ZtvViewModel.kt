@@ -27,8 +27,9 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
 
     private var osdJob: Job? = null
     private var timeoutJob: Job? = null
+    private var recoveryJob: Job? = null
     private var directInputJob: Job? = null
-    private var playGeneration = 0
+    private var playGeneration = 0L
     private var currentRetry = 0
     private var consecutiveFailures = 0
 
@@ -38,7 +39,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
     val playerController = PlayerController(
         context = application,
         onReady = ::onPlayerReady,
-        onError = { message -> onPlaybackFailed(message) },
+        onError = ::onPlaybackFailed,
     )
 
     init {
@@ -67,6 +68,9 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onEnterBackground() {
+        playGeneration += 1
+        timeoutJob?.cancel()
+        recoveryJob?.cancel()
         playerController.stopForBackground()
         updater.stop()
     }
@@ -212,6 +216,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         playGeneration += 1
+        recoveryJob?.cancel()
         currentRetry = 0
         _uiState.update {
             it.copy(
@@ -226,12 +231,12 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
         showOsd(channel)
     }
 
-    private fun startPlayback(channel: Channel, generation: Int) {
-        playerController.play(channel)
+    private fun startPlayback(channel: Channel, generation: Long) {
+        playerController.play(channel, generation)
         scheduleTimeout(channel, generation)
     }
 
-    private fun scheduleTimeout(channel: Channel, generation: Int) {
+    private fun scheduleTimeout(channel: Channel, generation: Long) {
         timeoutJob?.cancel()
         timeoutJob = viewModelScope.launch {
             delay(_uiState.value.settings.connectionTimeoutSeconds * 1000L)
@@ -241,27 +246,34 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
                 showMessage("Повторное подключение: ${channel.name}")
                 startPlayback(channel, generation)
             } else {
-                onPlaybackFailed("Канал временно недоступен")
+                onPlaybackFailed(generation, "Канал временно недоступен")
             }
         }
     }
 
-    private fun onPlayerReady() {
+    private fun onPlayerReady(playbackId: Long) {
+        if (playbackId != playGeneration) return
         timeoutJob?.cancel()
         consecutiveFailures = 0
         _uiState.update { it.copy(statusMessage = null) }
     }
 
-    private fun onPlaybackFailed(message: String) {
+    private fun onPlaybackFailed(playbackId: Long, message: String) {
+        if (playbackId != playGeneration) return
         timeoutJob?.cancel()
-        consecutiveFailures += 1
-        val state = _uiState.value
-        val skipLimit = state.visibleChannels.size.coerceAtMost(MAX_CONSECUTIVE_SKIPS)
-        if (state.settings.skipUnavailableChannels && state.visibleChannels.size > 1 && consecutiveFailures < skipLimit) {
-            showMessage("$message. Переключаю дальше")
-            switchChannel(1)
-        } else {
-            showMessage(message)
+        recoveryJob?.cancel()
+        recoveryJob = viewModelScope.launch {
+            delay(PLAYBACK_RECOVERY_DELAY_MS)
+            if (playbackId != playGeneration) return@launch
+            consecutiveFailures += 1
+            val state = _uiState.value
+            val skipLimit = state.visibleChannels.size.coerceAtMost(MAX_CONSECUTIVE_SKIPS)
+            if (state.settings.skipUnavailableChannels && state.visibleChannels.size > 1 && consecutiveFailures < skipLimit) {
+                showMessage("$message. Переключаю дальше")
+                switchChannel(1)
+            } else {
+                showMessage(message)
+            }
         }
     }
 
@@ -369,6 +381,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         timeoutJob?.cancel()
+        recoveryJob?.cancel()
         updater.stop()
         playerController.release()
         super.onCleared()
@@ -393,3 +406,4 @@ enum class SettingsItem {
 }
 
 private const val MAX_CONSECUTIVE_SKIPS = 5
+private const val PLAYBACK_RECOVERY_DELAY_MS = 250L

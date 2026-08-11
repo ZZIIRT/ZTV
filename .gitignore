@@ -9,3 +9,4 @@ captures/
 app/build/
 .android-sdk/
 .android-sdk-download/
+.Codex/

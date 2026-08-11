@@ -7,25 +7,33 @@ import com.zziirt.ztv.channels.Channel
 
 class PlayerController(
     context: Context,
-    private val onReady: () -> Unit,
-    private val onError: (String) -> Unit,
+    private val onReady: (Long) -> Unit,
+    private val onError: (Long, String) -> Unit,
 ) {
     val tvPlayer = TvPlayer(context)
+    private var activePlaybackId = 0L
 
     init {
         tvPlayer.exoPlayer.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY) onReady()
+                if (playbackState == Player.STATE_READY) {
+                    onReady(tvPlayer.currentPlaybackId() ?: activePlaybackId)
+                }
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                onError(error.message ?: "Ошибка воспроизведения")
+                onError(
+                    tvPlayer.currentPlaybackId() ?: activePlaybackId,
+                    error.message ?: "Ошибка воспроизведения",
+                )
             }
         })
     }
 
-    fun play(channel: Channel) {
-        tvPlayer.playLive(channel.url)
+    fun play(channel: Channel, playbackId: Long) {
+        activePlaybackId = playbackId
+        runCatching { tvPlayer.playLive(channel, playbackId) }
+            .onFailure { error -> onError(playbackId, error.message ?: "Ошибка запуска канала") }
     }
 
     fun stopForBackground() {
