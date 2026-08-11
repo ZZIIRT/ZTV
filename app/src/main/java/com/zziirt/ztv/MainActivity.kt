@@ -1,5 +1,6 @@
 package com.zziirt.ztv
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -7,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import com.zziirt.ztv.accessibility.ChannelAnnouncer
+import com.zziirt.ztv.boot.BootLaunchScheduler
 import com.zziirt.ztv.ui.ZtvApp
 import com.zziirt.ztv.ui.ZtvViewModel
 
@@ -16,16 +18,31 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        BootLaunchScheduler.cancel(this)
         channelAnnouncer = ChannelAnnouncer(this)
+        handleBootIntent(intent)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
             ZtvApp(viewModel, channelAnnouncer::announce)
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        BootLaunchScheduler.cancel(this)
+        handleBootIntent(intent)
+    }
+
     override fun onDestroy() {
         channelAnnouncer.release()
         super.onDestroy()
+    }
+
+    private fun handleBootIntent(intent: Intent) {
+        if (intent.getBooleanExtra(BootLaunchScheduler.EXTRA_BOOT_AUTOSTART, false)) {
+            viewModel.onBootAutostart()
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {

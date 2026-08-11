@@ -33,6 +33,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
     private var playGeneration = 0L
     private var currentRetry = 0
     private var consecutiveFailures = 0
+    private var bootPlaybackRequested = false
 
     private val _uiState = MutableStateFlow(ZtvUiState())
     val uiState: StateFlow<ZtvUiState> = _uiState
@@ -75,6 +76,14 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
         recoveryJob?.cancel()
         playerController.stopForBackground()
         updater.stop()
+    }
+
+    fun onBootAutostart() {
+        bootPlaybackRequested = true
+        _uiState.value.currentChannel?.let { channel ->
+            bootPlaybackRequested = false
+            playChannel(channel, forceReconnect = true)
+        }
     }
 
     fun onUp() {
@@ -224,7 +233,8 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
                 statusMessage = null,
             )
         }
-        if (current != null && settings.autoPlayLastChannel) {
+        if (current != null && (settings.autoPlayLastChannel || bootPlaybackRequested)) {
+            bootPlaybackRequested = false
             playChannel(current)
         }
     }

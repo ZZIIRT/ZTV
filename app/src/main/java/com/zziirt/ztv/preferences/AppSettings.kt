@@ -15,7 +15,7 @@ data class AppSettings(
     val favoriteOrder: List<String> = emptyList(),
     val favoritesOnly: Boolean = false,
     val autoPlayLastChannel: Boolean = true,
-    val bootAutostart: Boolean = false,
+    val bootAutostart: Boolean = true,
     val skipUnavailableChannels: Boolean = true,
     val connectionTimeoutSeconds: Int = 10,
     val showLogos: Boolean = true,

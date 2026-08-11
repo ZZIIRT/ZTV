@@ -4,30 +4,26 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.zziirt.ztv.MainActivity
 import com.zziirt.ztv.preferences.PreferencesRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED && intent.action != Intent.ACTION_LOCKED_BOOT_COMPLETED) {
-            return
-        }
+        if (!BootActions.isSupported(intent.action)) return
 
-        val enabled = runBlocking {
-            PreferencesRepository(context.applicationContext).settings.first().bootAutostart
-        }
-
-        if (enabled) {
-            runCatching {
-                val launchIntent = Intent(context, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                }
-                context.startActivity(launchIntent)
-            }.onFailure {
-                Log.w(TAG, "Boot autostart was blocked by the device", it)
+        val pendingResult = goAsync()
+        val appContext = context.applicationContext
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val enabled = PreferencesRepository(appContext).settings.first().bootAutostart
+                if (enabled) BootLaunchScheduler.launch(appContext)
+            } catch (error: Exception) {
+                Log.w(TAG, "Unable to prepare boot autostart", error)
+            } finally {
+                pendingResult.finish()
             }
         }
     }
@@ -35,4 +31,18 @@ class BootReceiver : BroadcastReceiver() {
     private companion object {
         const val TAG = "ZTVBootReceiver"
     }
+}
+
+internal object BootActions {
+    const val BOOT_COMPLETED = "android.intent.action.BOOT_COMPLETED"
+    const val QUICKBOOT_POWERON = "android.intent.action.QUICKBOOT_POWERON"
+    const val HTC_QUICKBOOT_POWERON = "com.htc.intent.action.QUICKBOOT_POWERON"
+
+    private val supportedActions = setOf(
+        BOOT_COMPLETED,
+        QUICKBOOT_POWERON,
+        HTC_QUICKBOOT_POWERON,
+    )
+
+    fun isSupported(action: String?): Boolean = action in supportedActions
 }

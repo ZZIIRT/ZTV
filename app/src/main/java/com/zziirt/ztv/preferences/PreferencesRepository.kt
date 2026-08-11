@@ -23,7 +23,7 @@ class PreferencesRepository(private val context: Context) {
             favoriteOrder = prefs[Keys.favoriteOrder]?.split(LIST_SEPARATOR)?.filter { it.isNotBlank() } ?: emptyList(),
             favoritesOnly = prefs[Keys.favoritesOnly] ?: false,
             autoPlayLastChannel = prefs[Keys.autoPlayLastChannel] ?: true,
-            bootAutostart = prefs[Keys.bootAutostart] ?: false,
+            bootAutostart = prefs[Keys.bootAutostart] ?: true,
             skipUnavailableChannels = prefs[Keys.skipUnavailableChannels] ?: true,
             connectionTimeoutSeconds = prefs[Keys.connectionTimeoutSeconds] ?: 10,
             showLogos = prefs[Keys.showLogos] ?: true,
@@ -86,7 +86,7 @@ class PreferencesRepository(private val context: Context) {
     }
 
     suspend fun toggleBootAutostart() {
-        context.dataStore.edit { it[Keys.bootAutostart] = !(it[Keys.bootAutostart] ?: false) }
+        context.dataStore.edit { it[Keys.bootAutostart] = !(it[Keys.bootAutostart] ?: true) }
     }
 
     suspend fun toggleSkipUnavailable() {
