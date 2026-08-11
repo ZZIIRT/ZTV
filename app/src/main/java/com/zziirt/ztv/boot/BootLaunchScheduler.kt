@@ -12,6 +12,8 @@ import com.zziirt.ztv.MainActivity
 
 object BootLaunchScheduler {
     const val EXTRA_BOOT_AUTOSTART = "com.zziirt.ztv.extra.BOOT_AUTOSTART"
+    @Volatile
+    private var activityStarted = false
 
     fun launch(context: Context) {
         scheduleFallback(context)
@@ -22,6 +24,12 @@ object BootLaunchScheduler {
         runCatching { context.startActivity(launchIntent(context)) }
             .onFailure { error -> Log.w(TAG, "Immediate boot launch was blocked", error) }
     }
+
+    fun markActivityStarted() {
+        activityStarted = true
+    }
+
+    fun wasActivityStarted(): Boolean = activityStarted
 
     fun cancel(context: Context) {
         val pendingIntent = findPendingIntent(context) ?: return

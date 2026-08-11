@@ -2,22 +2,24 @@ package com.zziirt.ztv.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.os.SystemClock
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.zziirt.ztv.boot.AccessibilityBootPolicy
 import com.zziirt.ztv.boot.BootLaunchScheduler
-import com.zziirt.ztv.preferences.PreferencesRepository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class ZtvAutostartAccessibilityService : AccessibilityService() {
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val exceptionHandler = CoroutineExceptionHandler { _, error ->
+        Log.e(TAG, "Autostart service failed", error)
+    }
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + exceptionHandler)
     private var launchJob: Job? = null
 
     override fun onServiceConnected() {
@@ -26,11 +28,9 @@ class ZtvAutostartAccessibilityService : AccessibilityService() {
 
         launchJob?.cancel()
         launchJob = serviceScope.launch {
-            delay(LAUNCH_DELAY_MILLIS)
-            val bootAutostartEnabled = withContext(Dispatchers.IO) {
-                PreferencesRepository(applicationContext).settings.first().bootAutostart
-            }
-            if (bootAutostartEnabled) {
+            for (retryInterval in AccessibilityBootPolicy.retryIntervalsMillis) {
+                delay(retryInterval)
+                if (BootLaunchScheduler.wasActivityStarted()) return@launch
                 BootLaunchScheduler.launchNow(this@ZtvAutostartAccessibilityService)
             }
         }
@@ -46,6 +46,6 @@ class ZtvAutostartAccessibilityService : AccessibilityService() {
     }
 
     private companion object {
-        const val LAUNCH_DELAY_MILLIS = 5_000L
+        const val TAG = "ZTVAccessibilityBoot"
     }
 }

@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        BootLaunchScheduler.markActivityStarted()
         BootLaunchScheduler.cancel(this)
         channelAnnouncer = ChannelAnnouncer(this)
         handleBootIntent(intent)
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        BootLaunchScheduler.markActivityStarted()
         setIntent(intent)
         BootLaunchScheduler.cancel(this)
         handleBootIntent(intent)

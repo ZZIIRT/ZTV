@@ -95,7 +95,7 @@ class PlaylistRepository(
 
     private companion object {
         const val MAX_PLAYLIST_BYTES = 16L * 1024 * 1024
-        const val USER_AGENT = "ZTV/0.1.7 (Android TV)"
+        const val USER_AGENT = "ZTV/0.1.8 (Android TV)"
     }
 }
 

@@ -50,6 +50,7 @@
 
         <service
             android:name=".accessibility.ZtvAutostartAccessibilityService"
+            android:directBootAware="true"
             android:enabled="true"
             android:exported="true"
             android:label="@string/autostart_accessibility_label"

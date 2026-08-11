@@ -1,11 +1,17 @@
 package com.zziirt.ztv.boot
 
 import com.zziirt.ztv.preferences.AppSettings
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BootLaunchPolicyTest {
+    @Test
+    fun `accessibility fallback retries while launcher is settling`() {
+        assertEquals(listOf(10_000L, 20_000L, 30_000L), AccessibilityBootPolicy.retryIntervalsMillis)
+    }
+
     @Test
     fun `accessibility fallback launches only shortly after device boot`() {
         assertTrue(AccessibilityBootPolicy.shouldLaunch(0L))
