@@ -12,8 +12,8 @@ android {
         applicationId = "com.zziirt.ztv"
         minSdk = 23
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.1.3"
+        versionCode = 5
+        versionName = "0.1.4"
     }
 
     buildFeatures {
@@ -58,4 +58,10 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+}
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    val defaultPlaylist = rootProject.file("playlist.m3u8")
+    inputs.file(defaultPlaylist)
+    systemProperty("ztv.defaultPlaylist", defaultPlaylist.absolutePath)
 }

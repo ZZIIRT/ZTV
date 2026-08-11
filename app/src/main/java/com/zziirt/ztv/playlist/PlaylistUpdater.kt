@@ -31,6 +31,6 @@ class PlaylistUpdater(
     }
 
     companion object {
-        private const val REFRESH_INTERVAL_MILLIS = 6L * 60L * 60L * 1000L
+        private const val REFRESH_INTERVAL_MILLIS = 15L * 60L * 1000L
     }
 }
