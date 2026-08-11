@@ -37,9 +37,17 @@ import com.zziirt.ztv.channels.Channel
 import com.zziirt.ztv.preferences.AppSettings
 
 @Composable
-fun ZtvApp(viewModel: ZtvViewModel) {
+fun ZtvApp(
+    viewModel: ZtvViewModel,
+    onChannelChanged: (String) -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val currentChannel = state.currentChannel
+
+    LaunchedEffect(currentChannel?.stableKey) {
+        currentChannel?.let { onChannelChanged(it.name) }
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->

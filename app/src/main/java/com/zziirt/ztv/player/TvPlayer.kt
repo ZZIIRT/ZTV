@@ -105,7 +105,7 @@ class TvPlayer(context: Context) {
         }
 
     private companion object {
-        const val USER_AGENT = "Mozilla/5.0 (Linux; Android TV) AppleWebKit/537.36 ZTV/0.1.3"
+        const val USER_AGENT = "Mozilla/5.0 (Linux; Android TV) AppleWebKit/537.36 ZTV/0.1.5"
     }
 }
 

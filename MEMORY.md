@@ -11,3 +11,4 @@
 - Favorite reordering is a draft UI operation: keep a pending order, persist it on OK, and discard it on BACK.
 - Keep minSdk 23 compatibility visible to lint: avoid Java 8 collection methods introduced at API 24, and handle TV remote keys through Activity.onKeyDown instead of the restricted ComponentActivity.dispatchKeyEvent override.
 - Keep the curated default channel list in the repository root `playlist.m3u8`; the TV app loads its raw GitHub URL on startup and every 15 minutes so channel fixes do not require a new APK.
+- Announce channel changes through a lifecycle-owned Android TextToSpeech instance. Keep only the latest name while TTS initializes and use QUEUE_FLUSH so rapid channel switching never builds a stale speech queue.

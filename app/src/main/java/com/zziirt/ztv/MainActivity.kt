@@ -6,18 +6,26 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import com.zziirt.ztv.accessibility.ChannelAnnouncer
 import com.zziirt.ztv.ui.ZtvApp
 import com.zziirt.ztv.ui.ZtvViewModel
 
 class MainActivity : ComponentActivity() {
     private val viewModel: ZtvViewModel by viewModels()
+    private lateinit var channelAnnouncer: ChannelAnnouncer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        channelAnnouncer = ChannelAnnouncer(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
-            ZtvApp(viewModel)
+            ZtvApp(viewModel, channelAnnouncer::announce)
         }
+    }
+
+    override fun onDestroy() {
+        channelAnnouncer.release()
+        super.onDestroy()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
