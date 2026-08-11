@@ -27,3 +27,13 @@ class ChannelAnnouncementQueueTest {
         assertEquals(listOf("НТВ"), spoken)
     }
 }
+
+class ChannelAnnouncerRetryPolicyTest {
+    @Test
+    fun `retries cover a speech engine that starts slowly after boot`() {
+        val delays = (0..4).map(ChannelAnnouncerRetryPolicy::delayAfterFailure)
+
+        assertEquals(listOf(5_000L, 10_000L, 15_000L, 30_000L, 60_000L), delays)
+        assertEquals(null, ChannelAnnouncerRetryPolicy.delayAfterFailure(5))
+    }
+}
