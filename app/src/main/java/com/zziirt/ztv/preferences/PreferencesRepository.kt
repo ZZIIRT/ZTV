@@ -1,8 +1,10 @@
 package com.zziirt.ztv.preferences
 
 import android.content.Context
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -11,7 +13,14 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-private val Context.dataStore by preferencesDataStore(name = "ztv_settings")
+internal object PreferencesRecovery {
+    fun replacement() = emptyPreferences()
+}
+
+private val Context.dataStore by preferencesDataStore(
+    name = "ztv_settings",
+    corruptionHandler = ReplaceFileCorruptionHandler { PreferencesRecovery.replacement() },
+)
 
 class PreferencesRepository(private val context: Context) {
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
