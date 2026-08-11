@@ -1,8 +1,6 @@
 package com.zziirt.ztv.ui
 
-import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,15 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.nativeKeyEvent
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zziirt.ztv.channels.Channel
 import com.zziirt.ztv.preferences.AppSettings
@@ -47,7 +40,6 @@ import com.zziirt.ztv.preferences.AppSettings
 fun ZtvApp(viewModel: ZtvViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
-    val focusRequester = remember { FocusRequester() }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -61,59 +53,9 @@ fun ZtvApp(viewModel: ZtvViewModel) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
     MaterialTheme {
         Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .focusRequester(focusRequester)
-                .focusable()
-                .onPreviewKeyEvent { event ->
-                    val native = event.nativeKeyEvent
-                    if (native.action != AndroidKeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
-                    when (native.keyCode) {
-                        AndroidKeyEvent.KEYCODE_DPAD_UP -> {
-                            viewModel.onUp()
-                            true
-                        }
-                        AndroidKeyEvent.KEYCODE_DPAD_DOWN -> {
-                            viewModel.onDown()
-                            true
-                        }
-                        AndroidKeyEvent.KEYCODE_DPAD_CENTER,
-                        AndroidKeyEvent.KEYCODE_ENTER,
-                        AndroidKeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                            viewModel.onOk(native.isLongPress)
-                            true
-                        }
-                        AndroidKeyEvent.KEYCODE_CHANNEL_UP -> {
-                            viewModel.onChannelUp()
-                            true
-                        }
-                        AndroidKeyEvent.KEYCODE_CHANNEL_DOWN -> {
-                            viewModel.onChannelDown()
-                            true
-                        }
-                        AndroidKeyEvent.KEYCODE_BACK -> viewModel.onBack()
-                        AndroidKeyEvent.KEYCODE_0,
-                        AndroidKeyEvent.KEYCODE_1,
-                        AndroidKeyEvent.KEYCODE_2,
-                        AndroidKeyEvent.KEYCODE_3,
-                        AndroidKeyEvent.KEYCODE_4,
-                        AndroidKeyEvent.KEYCODE_5,
-                        AndroidKeyEvent.KEYCODE_6,
-                        AndroidKeyEvent.KEYCODE_7,
-                        AndroidKeyEvent.KEYCODE_8,
-                        AndroidKeyEvent.KEYCODE_9 -> {
-                            viewModel.onDigit(native.keyCode - AndroidKeyEvent.KEYCODE_0)
-                            true
-                        }
-                        else -> false
-                    }
-                },
+            modifier = Modifier.fillMaxSize(),
             color = Color.Black,
         ) {
             PlayerScreen(state, viewModel)

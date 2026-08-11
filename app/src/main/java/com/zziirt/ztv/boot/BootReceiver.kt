@@ -3,6 +3,7 @@ package com.zziirt.ztv.boot
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.zziirt.ztv.MainActivity
 import com.zziirt.ztv.preferences.PreferencesRepository
 import kotlinx.coroutines.flow.first
@@ -19,11 +20,19 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         if (enabled) {
-            val launchIntent = Intent(context, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            runCatching {
+                val launchIntent = Intent(context, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+                context.startActivity(launchIntent)
+            }.onFailure {
+                Log.w(TAG, "Boot autostart was blocked by the device", it)
             }
-            context.startActivity(launchIntent)
         }
+    }
+
+    private companion object {
+        const val TAG = "ZTVBootReceiver"
     }
 }

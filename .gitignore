@@ -7,3 +7,5 @@ captures/
 .externalNativeBuild/
 .cxx/
 app/build/
+.android-sdk/
+.android-sdk-download/
