@@ -40,6 +40,10 @@ class DefaultPlaylistTest {
         )
         assertEquals((1..20).toList(), channels.map { it.number })
         assertEquals(
+            "https://live.smotrim.ru/vgtrk/0/russia1-hd/792000_576p.m3u8",
+            channels.single { it.name == "Россия 1" }.url,
+        )
+        assertEquals(
             "https://live.smotrim.ru/vgtrk/0/russia24-hd/792000_576p.m3u8",
             channels.single { it.name == "Россия-24" }.url,
         )
