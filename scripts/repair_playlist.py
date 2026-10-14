@@ -1,6 +1,7 @@
 """Verify live HLS and repair URLs without changing channel identity or order."""
 
 import argparse
+import base64
 import hashlib
 import http.client
 import ipaddress
@@ -11,6 +12,7 @@ import shutil
 import socket
 import ssl
 import subprocess
+import sys
 import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -25,6 +27,7 @@ MAX_MANIFEST = 4 * 1024 * 1024
 MAX_SEGMENT = 12 * 1024 * 1024
 MAX_CANDIDATES = 8
 MAX_CHANGES = 3
+POLICY_FILES = ("scripts/repair_playlist.py", "playlist-sources.json", ".github/workflows/repair-playlist.yml")
 SENSITIVE_QUERY = {"token", "drmreq", "signature", "sig", "auth", "key", "password", "e", "s"}
 REGIONAL = re.compile(r"plus\d|\+\d|спб|spb|kazakhstan|belarus|europa|europe|not 24/7", re.I)
 
@@ -134,13 +137,20 @@ def fetch(url, limit=MAX_MANIFEST):
     raise ProbeError("too_many_redirects")
 
 
-def candidates_from_feed(text, channel_ids):
-    result = {key: [] for key in channel_ids}
+def approved_prefixes(config):
+    return {key: [urljoin(url, ".") for url in urls] + config.get("discovery_prefixes", {}).get(key, [])
+            for key, urls in config["channels"].items()}
+
+
+def candidates_from_feed(text, prefixes):
+    result = {key: [] for key in prefixes}
     for entry in parse_playlist(text):
         channel_id, _, edition = entry.channel_id.partition("@")
         if channel_id not in result or edition not in {"", "SD", "HD"}:
             continue
         if REGIONAL.search(entry.info + " " + entry.url):
+            continue
+        if not any(entry.url.startswith(prefix) for prefix in prefixes[channel_id]):
             continue
         try:
             parts = validate_url(entry.url)
@@ -157,11 +167,12 @@ def load_candidates(config):
     errors = []
     for feed_url in config["feeds"]:
         try:
-            body, _ = fetch(feed_url)
-            found = candidates_from_feed(body.decode("utf-8-sig"), result)
+            completed = subprocess.run([sys.executable, __file__, "--feed", feed_url], capture_output=True, timeout=30, check=True)
+            body = base64.b64decode(completed.stdout, validate=True)
+            found = candidates_from_feed(body.decode("utf-8-sig"), approved_prefixes(config))
             for key, urls in found.items():
                 result[key].extend(sorted(urls, key=lambda url: not url.startswith("https://")))
-        except (ProbeError, OSError, ValueError, http.client.HTTPException):
+        except (ProbeError, OSError, ValueError, http.client.HTTPException, subprocess.SubprocessError):
             errors.append(urlsplit(feed_url).path)
     return {key: list(dict.fromkeys(urls)) for key, urls in result.items()}, errors
 
@@ -193,12 +204,18 @@ class HlsProbe:
             audio = [item for item in manifest.media if (
                 item.type == "AUDIO" and item.group_id == variant.stream_info.audio and item.uri
             )]
+            compatible_master = all(
+                item.stream_info.resolution and item.stream_info.resolution[1] <= 720 and
+                all(codec.startswith(("avc1", "mp4a.40.2", "mp4a.40.5", "mp4a.40.29"))
+                    for codec in (item.stream_info.codecs or "unknown").split(","))
+                for item in manifest.playlists
+            )
             if audio:
                 video["audio"] = self.sample(audio[0].absolute_uri, depth + 1)
-                if any(item.stream_info.resolution and item.stream_info.resolution[1] > 720 for item in manifest.playlists):
-                    raise ProbeError("separate_audio_high_resolution_master")
+                if not compatible_master or len([item for item in manifest.media if item.type == "AUDIO"]) != 1:
+                    raise ProbeError("incompatible_audio_master")
                 video["playable_url"] = url
-            elif all(item.stream_info.resolution and item.stream_info.resolution[1] <= 720 for item in manifest.playlists):
+            elif compatible_master:
                 video["playable_url"] = url
             return video
         if manifest.is_endlist or not manifest.segments:
@@ -211,6 +228,8 @@ class HlsProbe:
         if segment.byterange:
             raise ProbeError("unsupported_byterange")
         if segment.current_program_date_time:
+            if segment.current_program_date_time.tzinfo is None:
+                raise ProbeError("invalid_program_date_time")
             age = (datetime.now(timezone.utc) - segment.current_program_date_time).total_seconds()
             if age > 180 or age < -180:
                 raise ProbeError("stale_segment")
@@ -260,7 +279,7 @@ class HlsProbe:
             return ProbeResult(False, "network_or_decode_error")
 
 
-def repair_channel(entry, candidates, probe, sleep=time.sleep):
+def repair_channel(entry, candidates, probe, sleep=time.sleep, prefixes=None):
     result = {"id": entry.channel_id, "status": "healthy", "reason": "ok"}
     first = probe(entry.url)
     if first.ok:
@@ -269,7 +288,9 @@ def repair_channel(entry, candidates, probe, sleep=time.sleep):
         return entry.url, dict(result, status="restricted", reason="restricted")
     sleep(5)
     second = probe(entry.url)
-    if second.ok or second.reason == "restricted":
+    if second.reason == "restricted":
+        return entry.url, dict(result, status="restricted", reason="restricted")
+    if second.ok:
         return entry.url, dict(result, status="transient", reason=second.reason)
     deadline = time.monotonic() + 120
     for url in [value for value in candidates if value != entry.url][:MAX_CANDIDATES]:
@@ -282,18 +303,33 @@ def repair_channel(entry, candidates, probe, sleep=time.sleep):
         confirmed = probe(check.playable_url or url)
         if confirmed.ok and confirmed.fingerprint and confirmed.fingerprint != check.fingerprint:
             replacement = confirmed.playable_url or url
+            if prefixes is not None and not any(replacement.startswith(prefix) for prefix in prefixes):
+                continue
             return replacement, dict(result, status="replaced", reason=first.reason, url=replacement)
     return entry.url, dict(result, status="unresolved", reason=first.reason)
 
 
-def repaired_playlist(text, candidates, probe, sleep=time.sleep, workers=4):
+def bounded_channel(entry, candidates):
+    payload = {"entry": entry.__dict__, "candidates": candidates}
+    try:
+        completed = subprocess.run([sys.executable, __file__, "--channel"], input=json.dumps(payload).encode(),
+                                   capture_output=True, timeout=180, check=True)
+        return tuple(json.loads(completed.stdout))
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return entry.url, {"id": entry.channel_id, "status": "unresolved", "reason": "probe_timeout_or_error"}
+
+
+def repaired_playlist(text, candidates, probe, sleep=time.sleep, workers=4, channel_worker=None):
     entries = parse_playlist(text)
     if not entries or len({entry.channel_id for entry in entries}) != len(entries):
         raise ValueError("Empty playlist or duplicate channel IDs")
     if [entry.channel_id for entry in entries] != list(candidates):
         raise ValueError("Source catalog must match playlist IDs and order")
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        results = list(executor.map(lambda entry: repair_channel(entry, candidates[entry.channel_id], probe, sleep), entries))
+        results = list(executor.map(lambda entry: (
+            channel_worker(entry, candidates[entry.channel_id]) if channel_worker else
+            repair_channel(entry, candidates[entry.channel_id], probe, sleep)
+        ), entries))
     failed = sum(report["status"] in {"unresolved", "replaced"} for _, report in results)
     circuit_open = failed >= max(2, len(entries) * 0.6)
     lines, reports, changes = text.splitlines(), [], 0
@@ -312,11 +348,19 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def policy_digests():
+    return {name: digest((ROOT / name).read_bytes()) for name in POLICY_FILES}
+
+
 def publish(directory):
     original = (ROOT / "playlist.m3u8").read_bytes()
     report = json.loads((directory / "report.json").read_text(encoding="utf-8"))
     if digest(original) != report["base_sha256"]:
         raise ValueError("Playlist changed since probing; refuse stale publication")
+    if policy_digests() != report["policy_sha256"]:
+        raise ValueError("Repair policy changed since probing")
+    config = json.loads((ROOT / "playlist-sources.json").read_text(encoding="utf-8"))
+    prefixes = approved_prefixes(config)
     updated = (directory / "playlist.m3u8").read_text(encoding="utf-8")
     before, after = parse_playlist(original.decode("utf-8-sig")), parse_playlist(updated)
     if [item.info for item in before] != [item.info for item in after]:
@@ -330,6 +374,8 @@ def publish(directory):
             raise ValueError("Report channel identity mismatch")
         if old.url != new.url:
             validate_url(new.url)
+            if not any(new.url.startswith(prefix) for prefix in prefixes[old.channel_id]):
+                raise ValueError("Replacement has an unapproved origin or channel path")
             if status["status"] != "replaced" or status.get("url") != new.url:
                 raise ValueError("Unverified replacement")
             expected_lines[old.line_index] = new.url
@@ -350,7 +396,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / ".Codex" / "playlist-repair")
     parser.add_argument("--publish", type=Path)
+    parser.add_argument("--channel", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--feed", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.feed:
+        body, _ = fetch(args.feed)
+        sys.stdout.buffer.write(base64.b64encode(body))
+        return
+    if args.channel:
+        payload = json.load(sys.stdin)
+        channel = Entry(**payload["entry"])
+        config = json.loads((ROOT / "playlist-sources.json").read_text(encoding="utf-8"))
+        url, report = repair_channel(channel, payload["candidates"], HlsProbe(),
+                                     prefixes=approved_prefixes(config)[channel.channel_id])
+        sys.stdout.write(json.dumps([url, report]))
+        return
     if args.publish:
         publish(args.publish)
         return
@@ -359,10 +419,11 @@ def main():
     original = (ROOT / "playlist.m3u8").read_bytes()
     config = json.loads((ROOT / "playlist-sources.json").read_text(encoding="utf-8"))
     candidates, source_errors = load_candidates(config)
-    updated, channels = repaired_playlist(original.decode("utf-8-sig"), candidates, HlsProbe())
+    updated, channels = repaired_playlist(original.decode("utf-8-sig"), candidates, None, channel_worker=bounded_channel)
     args.output.mkdir(parents=True, exist_ok=True)
     (args.output / "playlist.m3u8").write_text(updated, encoding="utf-8", newline="\n")
-    report = {"checked_at": datetime.now(timezone.utc).isoformat(), "base_sha256": digest(original), "source_errors": source_errors, "channels": channels}
+    report = {"checked_at": datetime.now(timezone.utc).isoformat(), "base_sha256": digest(original),
+              "policy_sha256": policy_digests(), "source_errors": source_errors, "channels": channels}
     (args.output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     summary = "# Playlist health\n\n| Channel ID | Status | Reason |\n|---|---|---|\n"
     for channel in channels:

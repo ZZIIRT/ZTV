@@ -11,7 +11,28 @@ def entry(channel_id="One.ru", url="https://example.com/old.m3u8", index=2):
     return repair.Entry(channel_id, f'#EXTINF:-1 tvg-id="{channel_id}",Channel', url, index)
 
 
+def copy_policy(root):
+    for name in repair.POLICY_FILES:
+        target = root / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((repair.ROOT / name).read_bytes())
+
+
 class RepairPolicyTests(unittest.TestCase):
+    def test_second_probe_geoblock_is_classified_as_restricted(self):
+        responses = iter([repair.ProbeResult(False, "http_503"), repair.ProbeResult(False, "restricted")])
+        current = entry()
+        url, report = repair.repair_channel(current, [], lambda _: next(responses), lambda _: None)
+        self.assertEqual(current.url, url)
+        self.assertEqual("restricted", report["status"])
+
+    def test_stuck_channel_worker_is_bounded_and_keeps_original(self):
+        with patch.object(repair.subprocess, "run", side_effect=repair.subprocess.TimeoutExpired("probe", 180)):
+            current = entry()
+            url, report = repair.bounded_channel(current, [])
+            self.assertEqual(current.url, url)
+            self.assertEqual("probe_timeout_or_error", report["reason"])
+
     def test_healthy_current_stream_is_retained_without_trying_backups(self):
         calls = []
 
@@ -107,7 +128,11 @@ https://example.com/auth.m3u8?token=secret
 #EXTINF:-1 tvg-id="One.ru@SD",One SPB
 https://example.com/spb.m3u8
 '''
-        self.assertEqual({"One.ru": ["https://example.com/main.m3u8"]}, repair.candidates_from_feed(text, ["One.ru"]))
+        self.assertEqual({"One.ru": ["https://example.com/main.m3u8"]}, repair.candidates_from_feed(text, {"One.ru": ["https://example.com/main.m3u8"]}))
+
+    def test_channel_id_from_an_unapproved_origin_is_not_enough(self):
+        text = '#EXTM3U\n#EXTINF:-1 tvg-id="One.ru@SD",Unrelated\nhttps://unknown.example/other.m3u8\n'
+        self.assertEqual({"One.ru": []}, repair.candidates_from_feed(text, {"One.ru": ["https://example.com/one/"]}))
 
     def test_local_addresses_and_credentials_are_rejected(self):
         for url in ["file:///etc/passwd", "http://127.0.0.1/a.m3u8", "http://192.168.1.1/a.m3u8", "http://[::1]/a", "https://user:pass@example.com/a", "https://example.com/a?drmreq=x", "https://example.com/a\nInjected"]:
@@ -140,6 +165,26 @@ https://example.com/spb.m3u8
 
 
 class HlsTests(unittest.TestCase):
+    def test_missing_duration_and_naive_time_fail_only_the_probe(self):
+        for text, expected in [
+            (b'#EXTM3U\n#EXTINF:6,\nx.ts\n', "invalid_target_duration"),
+            (b'#EXTM3U\n#EXT-X-TARGETDURATION:6\n#EXT-X-PROGRAM-DATE-TIME:2026-10-14T10:00:00\n#EXTINF:6,\nx.ts\n', "invalid_program_date_time"),
+        ]:
+            with patch.object(repair, "fetch", return_value=(text, "https://example.com/x.m3u8")):
+                self.assertEqual(expected, repair.HlsProbe()("https://example.com/x.m3u8").reason)
+
+    def test_mixed_codec_master_publishes_only_verified_h264_rendition(self):
+        from unittest.mock import MagicMock
+
+        master = b'#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,CODECS="avc1.4d401f,mp4a.40.2",RESOLUTION=1024x576\nlow.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=2000000,CODECS="hvc1.1.6.L93,ac-3",RESOLUTION=1280x720\nhigh.m3u8\n'
+        media = b'#EXTM3U\n#EXT-X-TARGETDURATION:6\n#EXTINF:6,\n1.ts\n'
+        segment = (b'\x47' + bytes(187)) * 6
+        codecs = {"streams": [{"codec_name": "h264", "height": 576}, {"codec_name": "aac"}]}
+        with patch.object(repair, "fetch", side_effect=[(master, "https://example.com/master.m3u8"), (media, "https://example.com/low.m3u8"), (segment, "https://example.com/1.ts")]), patch.object(repair.subprocess, "run", return_value=MagicMock(stdout=json.dumps(codecs).encode())):
+            result = repair.HlsProbe()("https://example.com/master.m3u8")
+            self.assertTrue(result.ok)
+            self.assertEqual("https://example.com/low.m3u8", result.playable_url)
+
     def test_inherited_program_time_rejects_a_stale_live_playlist(self):
         text = b'#EXTM3U\n#EXT-X-TARGETDURATION:6\n#EXT-X-PROGRAM-DATE-TIME:2020-01-01T00:00:00Z\n#EXTINF:6,\na.ts\n#EXTINF:6,\nb.ts\n'
         with patch.object(repair, "fetch", return_value=(text, "https://example.com/x.m3u8")):
@@ -177,17 +222,18 @@ class PublishTests(unittest.TestCase):
     def test_verified_replacement_preserves_channel_metadata_and_other_urls(self):
         original = (repair.ROOT / "playlist.m3u8").read_bytes()
         entries = repair.parse_playlist(original.decode("utf-8"))
-        replacement = "https://example.com/verified.m3u8"
+        replacement = "https://zabava-htlive.cdn.ngenix.net/hls/CH_1TVSD/recovered.m3u8"
         updated = original.decode("utf-8").replace(entries[0].url, replacement)
         statuses = [{"id": item.channel_id, "status": "healthy", "reason": "ok"} for item in entries]
         statuses[0].update(status="replaced", url=replacement)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            copy_policy(root)
             artifact = root / "artifact"
             artifact.mkdir()
             (root / "playlist.m3u8").write_bytes(original)
             (artifact / "playlist.m3u8").write_text(updated, encoding="utf-8")
-            report = {"base_sha256": repair.digest(original), "channels": statuses, "checked_at": "2026-10-14T10:00:00+00:00", "source_errors": []}
+            report = {"base_sha256": repair.digest(original), "policy_sha256": repair.policy_digests(), "channels": statuses, "checked_at": "2026-10-14T10:00:00+00:00", "source_errors": []}
             (artifact / "report.json").write_text(json.dumps(report), encoding="utf-8")
             with patch.object(repair, "ROOT", root):
                 repair.publish(artifact)
@@ -208,14 +254,15 @@ class PublishTests(unittest.TestCase):
     def test_unverified_url_cannot_be_published(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            copy_policy(root)
             original = (repair.ROOT / "playlist.m3u8").read_bytes()
             entries = repair.parse_playlist(original.decode())
             artifact = root / "artifact"
             artifact.mkdir()
             (root / "playlist.m3u8").write_bytes(original)
-            updated = original.decode().replace(entries[0].url, "https://example.com/unverified.m3u8")
+            updated = original.decode().replace(entries[0].url, "https://zabava-htlive.cdn.ngenix.net/hls/CH_1TVSD/unverified.m3u8")
             (artifact / "playlist.m3u8").write_text(updated, encoding="utf-8")
-            report = {"base_sha256": repair.digest(original), "channels": [{"id": item.channel_id, "status": "healthy"} for item in entries]}
+            report = {"base_sha256": repair.digest(original), "policy_sha256": repair.policy_digests(), "channels": [{"id": item.channel_id, "status": "healthy"} for item in entries]}
             (artifact / "report.json").write_text(json.dumps(report))
             with patch.object(repair, "ROOT", root), self.assertRaisesRegex(ValueError, "Unverified replacement"):
                 repair.publish(artifact)
@@ -226,15 +273,27 @@ class PublishTests(unittest.TestCase):
         entries = repair.parse_playlist(original.decode("utf-8"))
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            copy_policy(root)
             artifact = root / "artifact"
             artifact.mkdir()
             (root / "playlist.m3u8").write_bytes(original)
             updated = original.decode("utf-8") + '#EXTINF:-1,Unrequested\nhttps://example.com/extra.m3u8\n'
             (artifact / "playlist.m3u8").write_text(updated, encoding="utf-8")
-            report = {"base_sha256": repair.digest(original), "channels": [{"id": item.channel_id, "status": "healthy"} for item in entries]}
+            report = {"base_sha256": repair.digest(original), "policy_sha256": repair.policy_digests(), "channels": [{"id": item.channel_id, "status": "healthy"} for item in entries]}
             (artifact / "report.json").write_text(json.dumps(report))
             with patch.object(repair, "ROOT", root), self.assertRaisesRegex(ValueError, "non-URL changes"):
                 repair.publish(artifact)
+
+    def test_policy_change_after_probing_rejects_publication(self):
+        original = (repair.ROOT / "playlist.m3u8").read_bytes()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            copy_policy(root)
+            (root / "playlist.m3u8").write_bytes(original)
+            (root / "report.json").write_text(json.dumps({"base_sha256": repair.digest(original), "policy_sha256": repair.policy_digests()}))
+            (root / "playlist-sources.json").write_text('{"changed":true}')
+            with patch.object(repair, "ROOT", root), self.assertRaisesRegex(ValueError, "policy changed"):
+                repair.publish(root)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,22 @@
     "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/ru.m3u",
     "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_russia.m3u8"
   ],
+  "discovery_prefixes": {
+    "ChannelOne.ru": ["https://stream8.cinerama.uz/1214/"],
+    "Russia1.ru": ["https://stream8.cinerama.uz/1020/"],
+    "NTV.ru": ["https://cdn-dvr.ntv.ru/ntv0_hd/", "https://stream8.cinerama.uz/1023/", "http://ott-cdn.ucom.am/s17/"],
+    "RussiaK.ru": ["https://stream8.cinerama.uz/1048/"],
+    "Russia24.ru": ["https://stream8.cinerama.uz/1021/"],
+    "TVCentr.ru": ["https://stream8.cinerama.uz/1025/", "http://ott-cdn.ucom.am/s54/"],
+    "RENTV.ru": ["https://streaming.televizor-24-tochka.ru/live/14.m3u8"],
+    "STS.ru": ["http://ott-cdn.ucom.am/s52/"],
+    "Domashniy.ru": ["http://ott-cdn.ucom.am/s88/"],
+    "TV3.ru": ["https://streaming.televizor-24-tochka.ru/live/18.m3u8"],
+    "Friday.ru": ["https://vod.tuva.ru/friday/"],
+    "Zvezda.ru": ["https://stream8.cinerama.uz/1050/"],
+    "Mir.ru": ["https://stream8.cinerama.uz/1218/", "https://tvcdn01.oktv.kz/tv/mir/"],
+    "TNT.ru": ["http://ott-cdn.ucom.am/s19/"]
+  },
   "channels": {
     "ChannelOne.ru": ["https://zabava-htlive.cdn.ngenix.net/hls/CH_1TVSD/variant.m3u8"],
     "Russia1.ru": [
