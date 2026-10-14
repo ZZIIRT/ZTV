@@ -196,7 +196,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun bootstrap() {
         val settings = preferences.settings.first()
-        val cached = playlistRepository.loadCached()
+        val cached = playlistRepository.loadCached(settings.playlistUrl)
         if (cached.isNotEmpty()) {
             applyChannels(cached, settings)
         }
@@ -215,7 +215,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
             is RefreshResult.Failure -> {
                 if (result.cachedChannels.isNotEmpty()) {
                     applyChannels(result.cachedChannels, _uiState.value.settings)
-                    showMessage("Интернет недоступен, включена сохранённая копия")
+                    showMessage("Основной список недоступен, включена сохранённая копия")
                 } else {
                     _uiState.update {
                         it.copy(
@@ -231,6 +231,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun applyChannels(channels: List<Channel>, settings: AppSettings) {
         val visible = favoritesRepository.visibleChannels(channels, settings)
         val current = chooseCurrentChannel(channels, visible, settings)
+        current?.let(playerController::updateChannelSources)
         _uiState.update {
             it.copy(
                 channels = channels,
@@ -251,8 +252,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
         visibleChannels: List<Channel>,
         settings: AppSettings,
     ): Channel? {
-        val preferred = visibleChannels.ifEmpty { channels }
-        return preferred.firstOrNull { it.stableKey == settings.lastChannelKey } ?: preferred.firstOrNull()
+        return selectRefreshedChannel(channels, visibleChannels, _uiState.value.currentChannel?.stableKey, settings.lastChannelKey)
     }
 
     private fun switchChannel(direction: Int) {
@@ -304,7 +304,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
         timeoutJob = viewModelScope.launch {
             delay(_uiState.value.settings.connectionTimeoutSeconds * 1000L)
             if (generation != playGeneration || playerController.tvPlayer.isReady()) return@launch
-            if (currentRetry == 0) {
+            if (currentRetry == 0 && !playerController.hasAlternativeSource(generation)) {
                 currentRetry = 1
                 showMessage("Повторное подключение: ${channel.name}")
                 startPlayback(channel, generation)
@@ -317,6 +317,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
     private fun onPlayerReady(playbackId: Long) {
         if (playbackId != playGeneration) return
         timeoutJob?.cancel()
+        recoveryJob?.cancel()
         consecutiveFailures = 0
         _uiState.update { it.copy(statusMessage = null) }
     }
@@ -328,6 +329,13 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
         recoveryJob = viewModelScope.launch {
             delay(PLAYBACK_RECOVERY_DELAY_MS)
             if (playbackId != playGeneration) return@launch
+            val channel = _uiState.value.currentChannel
+            if (channel != null && playerController.tryNextSource(playbackId)) {
+                currentRetry = 0
+                showMessage("Другой источник: ${channel.name}")
+                scheduleTimeout(channel, playbackId)
+                return@launch
+            }
             consecutiveFailures += 1
             val state = _uiState.value
             val skipLimit = state.visibleChannels.size.coerceAtMost(MAX_CONSECUTIVE_SKIPS)

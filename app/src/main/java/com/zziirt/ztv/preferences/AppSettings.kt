@@ -26,5 +26,7 @@ data class AppSettings(
     companion object {
         const val DEFAULT_PLAYLIST_URL =
             "https://raw.githubusercontent.com/ZZIIRT/ZTV/main/playlist.m3u8"
+        const val DEFAULT_FALLBACK_URL =
+            "https://raw.githubusercontent.com/ZZIIRT/ZTV/main/playlist-fallbacks.json"
     }
 }

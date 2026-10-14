@@ -7,6 +7,7 @@ data class Channel(
     val tvgId: String? = null,
     val logoUrl: String? = null,
     val groupTitle: String? = null,
+    val alternativeUrls: List<String> = emptyList(),
 ) {
     val stableKey: String = tvgId?.takeIf { it.isNotBlank() } ?: normalizeName(name)
 

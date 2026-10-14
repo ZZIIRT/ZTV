@@ -71,7 +71,7 @@ jobs:
         run: python3 scripts/repair_playlist.py --publish "$RUNNER_TEMP/playlist-repair"
       - name: Commit only verified playlist and daily health report
         run: |
-          git add -- playlist.m3u8 playlist-health.json
+          git add -- playlist.m3u8 playlist-fallbacks.json playlist-health.json
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

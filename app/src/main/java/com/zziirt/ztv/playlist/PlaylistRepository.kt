@@ -3,6 +3,7 @@ package com.zziirt.ztv.playlist
 import android.content.Context
 import android.util.AtomicFile
 import com.zziirt.ztv.channels.Channel
+import com.zziirt.ztv.preferences.AppSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -19,15 +20,18 @@ class PlaylistRepository(
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(40, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
         .build(),
 ) {
     private val cacheFile = File(context.filesDir, "playlist.m3u8")
+    private val assets = context.applicationContext.assets
     private val downloadFile = File(context.cacheDir, "playlist.download")
+    private val fallbackCatalog = FallbackCatalog(context, client)
 
-    suspend fun loadCached(): List<Channel> = withContext(Dispatchers.IO) {
-        runCatching { parseFile(cacheFile) }.getOrDefault(emptyList())
+    suspend fun loadCached(playlistUrl: String = AppSettings.DEFAULT_PLAYLIST_URL): List<Channel> = withContext(Dispatchers.IO) {
+        runCatching { withFallbacks(cachedOrBundled(playlistUrl), playlistUrl, false) }.getOrDefault(emptyList())
     }
 
     suspend fun refresh(playlistUrl: String): RefreshResult = withContext(Dispatchers.IO) {
@@ -36,10 +40,10 @@ class PlaylistRepository(
             val channels = parseFile(downloadFile)
             if (channels.isEmpty()) error("Playlist has no playable channels")
             replaceCache(downloadFile)
-            RefreshResult.Success(channels, System.currentTimeMillis())
+            RefreshResult.Success(withFallbacks(channels, playlistUrl, true), System.currentTimeMillis())
         }.getOrElse { error ->
             RefreshResult.Failure(
-                cachedChannels = runCatching { parseFile(cacheFile) }.getOrDefault(emptyList()),
+                cachedChannels = runCatching { withFallbacks(cachedOrBundled(playlistUrl), playlistUrl, true) }.getOrDefault(emptyList()),
                 message = error.message ?: "Playlist update failed",
             )
         }.also {
@@ -66,6 +70,15 @@ class PlaylistRepository(
     private fun parseFile(file: File): List<Channel> {
         if (!file.isFile || file.length() == 0L) return emptyList()
         return file.inputStream().buffered().use(parser::parse)
+    }
+
+    private fun withFallbacks(channels: List<Channel>, playlistUrl: String, refresh: Boolean): List<Channel> =
+        if (playlistUrl == AppSettings.DEFAULT_PLAYLIST_URL) fallbackCatalog.decorate(channels, refresh) else channels
+
+    private fun cachedOrBundled(playlistUrl: String): List<Channel> {
+        val cached = runCatching { parseFile(cacheFile) }.getOrDefault(emptyList())
+        if (cached.isNotEmpty() || playlistUrl != AppSettings.DEFAULT_PLAYLIST_URL) return cached
+        return assets.open("playlist.m3u8").use(parser::parse)
     }
 
     private fun replaceCache(source: File) {
@@ -95,7 +108,7 @@ class PlaylistRepository(
 
     private companion object {
         const val MAX_PLAYLIST_BYTES = 16L * 1024 * 1024
-        const val USER_AGENT = "ZTV/0.1.11 (Android TV)"
+        const val USER_AGENT = "ZTV/0.1.12 (Android TV)"
     }
 }
 

@@ -111,6 +111,36 @@ class RepairPolicyTests(unittest.TestCase):
 
 
 class SourceAndNetworkTests(unittest.TestCase):
+    def test_explicit_alias_maps_only_the_same_broadcaster(self):
+        text = '#EXTM3U\n#EXTINF:-1 tvg-id="Match.ru@SD",Match TV\nhttps://example.com/match.m3u8\n#EXTINF:-1 tvg-id="MatchPlaneta.ru@SD",Different\nhttps://example.com/match.m3u8\n'
+        found = repair.candidates_from_feed(text, {"MatchTV.ru": ["https://example.com/match.m3u8"]}, {"Match.ru": "MatchTV.ru"})
+        self.assertEqual({"MatchTV.ru": ["https://example.com/match.m3u8"]}, found)
+
+    def test_catalog_preserves_all_channel_ids_and_rejects_unknown_origins(self):
+        text = (repair.ROOT / "playlist.m3u8").read_text(encoding="utf-8")
+        entries = repair.parse_playlist(text)
+        config = json.loads((repair.ROOT / "playlist-sources.json").read_text(encoding="utf-8"))
+        candidates = dict(config["channels"])
+        candidates[entries[0].channel_id] = ["https://unknown.example/other.m3u8"]
+        catalog = repair.make_catalog(text, candidates, config)
+        repair.validate_catalog(catalog, entries, config)
+        self.assertEqual([item.channel_id for item in entries], list(catalog["channels"]))
+        self.assertEqual([entries[0].url], catalog["channels"][entries[0].channel_id])
+        catalog["channels"][entries[0].channel_id].append("https://unknown.example/other.m3u8")
+        with self.assertRaisesRegex(ValueError, "Unapproved fallback"):
+            repair.validate_catalog(catalog, entries, config)
+
+    def test_internal_cdn_signatures_are_not_persistable_source_urls(self):
+        url = "https://example.com/media.ts?s=public-cdn-signature"
+        self.assertEqual("example.com", repair.validate_url(url, allow_signed=True).hostname)
+        with self.assertRaisesRegex(repair.ProbeError, "signed_or_authenticated"):
+            repair.validate_url(url)
+
+    def test_channel_path_traversal_is_rejected(self):
+        for path in ["../other/stream.m3u8", "%2e%2e/other/stream.m3u8", "%252e%252e/other/stream.m3u8"]:
+            with self.assertRaisesRegex(repair.ProbeError, "unsafe_channel_path"):
+                repair.validate_url("https://example.com/channel/" + path)
+
     def test_discovery_uses_exact_channel_id_and_main_edition_only(self):
         text = '''#EXTM3U
 #EXTINF:-1 tvg-id="One.ru@SD",One
@@ -165,6 +195,11 @@ https://example.com/spb.m3u8
 
 
 class HlsTests(unittest.TestCase):
+    def test_ngenix_ended_placeholder_is_inconclusive_region_restriction(self):
+        text = b'#EXTM3U\n#EXT-X-TARGETDURATION:6\n#EXTINF:6,\nplaceholder.ts\n#EXT-X-ENDLIST\n'
+        url = "https://zabava-htlive.cdn.ngenix.net/hls/CH_1TVSD/variant.m3u8"
+        with patch.object(repair, "fetch", return_value=(text, url)):
+            self.assertEqual("restricted", repair.HlsProbe()(url).reason)
     def test_missing_duration_and_naive_time_fail_only_the_probe(self):
         for text, expected in [
             (b'#EXTM3U\n#EXTINF:6,\nx.ts\n', "invalid_target_duration"),
@@ -233,7 +268,11 @@ class PublishTests(unittest.TestCase):
             artifact.mkdir()
             (root / "playlist.m3u8").write_bytes(original)
             (artifact / "playlist.m3u8").write_text(updated, encoding="utf-8")
-            report = {"base_sha256": repair.digest(original), "policy_sha256": repair.policy_digests(), "channels": statuses, "checked_at": "2026-10-14T10:00:00+00:00", "source_errors": []}
+            config = json.loads((repair.ROOT / "playlist-sources.json").read_text(encoding="utf-8"))
+            catalog = repair.make_catalog(updated, config["channels"], config)
+            catalog_bytes = json.dumps(catalog).encode()
+            (artifact / "playlist-fallbacks.json").write_bytes(catalog_bytes)
+            report = {"base_sha256": repair.digest(original), "policy_sha256": repair.policy_digests(), "catalog_sha256": repair.digest(catalog_bytes), "channels": statuses, "checked_at": "2026-10-14T10:00:00+00:00", "source_errors": []}
             (artifact / "report.json").write_text(json.dumps(report), encoding="utf-8")
             with patch.object(repair, "ROOT", root):
                 repair.publish(artifact)

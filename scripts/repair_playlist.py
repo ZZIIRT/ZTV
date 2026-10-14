@@ -19,10 +19,10 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import parse_qs, urljoin, urlsplit
+from urllib.parse import parse_qs, unquote, urljoin, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
-USER_AGENT = "Mozilla/5.0 (Linux; Android TV) AppleWebKit/537.36 ZTV/0.1.11"
+USER_AGENT = "Mozilla/5.0 (Linux; Android TV) AppleWebKit/537.36 ZTV/0.1.12"
 MAX_MANIFEST = 4 * 1024 * 1024
 MAX_SEGMENT = 12 * 1024 * 1024
 MAX_CANDIDATES = 8
@@ -69,7 +69,7 @@ def parse_playlist(text):
     return entries
 
 
-def validate_url(url):
+def validate_url(url, allow_signed=False):
     parts = urlsplit(url)
     if (
         parts.scheme not in {"http", "https"} or not parts.hostname or
@@ -77,8 +77,13 @@ def validate_url(url):
         any(ord(char) < 33 for char in url)
     ):
         raise ProbeError("unsafe_url")
-    if set(key.lower() for key in parse_qs(parts.query)) & SENSITIVE_QUERY:
+    if not allow_signed and set(key.lower() for key in parse_qs(parts.query)) & SENSITIVE_QUERY:
         raise ProbeError("signed_or_authenticated_url")
+    decoded_path = parts.path
+    for _ in range(3):
+        decoded_path = unquote(decoded_path)
+    if "\\" in decoded_path or any(item in {".", ".."} for item in decoded_path.split("/")) or any(ord(char) < 32 for char in decoded_path):
+        raise ProbeError("unsafe_channel_path")
     try:
         address = ipaddress.ip_address(parts.hostname)
     except ValueError:
@@ -91,7 +96,7 @@ def validate_url(url):
 def fetch(url, limit=MAX_MANIFEST):
     # Pin the validated public IP for the socket, including every redirect.
     for _ in range(5):
-        parts = validate_url(url)
+        parts = validate_url(url, allow_signed=True)
         port = parts.port or (443 if parts.scheme == "https" else 80)
         addresses = socket.getaddrinfo(parts.hostname, port, type=socket.SOCK_STREAM)
         if not addresses or any(not ipaddress.ip_address(item[4][0]).is_global for item in addresses):
@@ -138,14 +143,20 @@ def fetch(url, limit=MAX_MANIFEST):
 
 
 def approved_prefixes(config):
-    return {key: [urljoin(url, ".") for url in urls] + config.get("discovery_prefixes", {}).get(key, [])
+    def seed_prefix(url):
+        filename = urlsplit(url).path.rsplit("/", 1)[-1]
+        generic = re.fullmatch(r"(?:index|variant|playlist(?:_\d+)?|\d+p|\d+_\d+p)\.m3u8", filename)
+        return urljoin(url, ".") if generic else url
+
+    return {key: [seed_prefix(url) for url in urls] + config.get("discovery_prefixes", {}).get(key, [])
             for key, urls in config["channels"].items()}
 
 
-def candidates_from_feed(text, prefixes):
+def candidates_from_feed(text, prefixes, aliases=None):
     result = {key: [] for key in prefixes}
     for entry in parse_playlist(text):
         channel_id, _, edition = entry.channel_id.partition("@")
+        channel_id = (aliases or {}).get(channel_id, channel_id)
         if channel_id not in result or edition not in {"", "SD", "HD"}:
             continue
         if REGIONAL.search(entry.info + " " + entry.url):
@@ -169,7 +180,7 @@ def load_candidates(config):
         try:
             completed = subprocess.run([sys.executable, __file__, "--feed", feed_url], capture_output=True, timeout=30, check=True)
             body = base64.b64decode(completed.stdout, validate=True)
-            found = candidates_from_feed(body.decode("utf-8-sig"), approved_prefixes(config))
+            found = candidates_from_feed(body.decode("utf-8-sig"), approved_prefixes(config), config.get("aliases"))
             for key, urls in found.items():
                 result[key].extend(sorted(urls, key=lambda url: not url.startswith("https://")))
         except (ProbeError, OSError, ValueError, http.client.HTTPException, subprocess.SubprocessError):
@@ -218,6 +229,8 @@ class HlsProbe:
             elif compatible_master:
                 video["playable_url"] = url
             return video
+        if manifest.is_endlist and urlsplit(actual_url).hostname.endswith(".cdn.ngenix.net"):
+            raise ProbeError("restricted")
         if manifest.is_endlist or not manifest.segments:
             raise ProbeError("not_live")
         if not isinstance(manifest.target_duration, (int, float)) or manifest.target_duration <= 0:
@@ -303,6 +316,10 @@ def repair_channel(entry, candidates, probe, sleep=time.sleep, prefixes=None):
         confirmed = probe(check.playable_url or url)
         if confirmed.ok and confirmed.fingerprint and confirmed.fingerprint != check.fingerprint:
             replacement = confirmed.playable_url or url
+            try:
+                validate_url(replacement)
+            except (ProbeError, ValueError):
+                continue
             if prefixes is not None and not any(replacement.startswith(prefix) for prefix in prefixes):
                 continue
             return replacement, dict(result, status="replaced", reason=first.reason, url=replacement)
@@ -352,6 +369,36 @@ def policy_digests():
     return {name: digest((ROOT / name).read_bytes()) for name in POLICY_FILES}
 
 
+def make_catalog(text, candidates, config):
+    prefixes = approved_prefixes(config)
+    catalog = {}
+    for entry in parse_playlist(text):
+        urls = [entry.url]
+        for url in candidates.get(entry.channel_id, []):
+            try:
+                validate_url(url)
+                if any(url.startswith(prefix) for prefix in prefixes[entry.channel_id]):
+                    urls.append(url)
+            except (ProbeError, ValueError):
+                continue
+        catalog[entry.channel_id] = list(dict.fromkeys(urls))[:9]
+    return {"schema": 1, "channels": catalog}
+
+
+def validate_catalog(catalog, entries, config):
+    if catalog.get("schema") != 1 or list(catalog.get("channels", {})) != [entry.channel_id for entry in entries]:
+        raise ValueError("Fallback catalog channel identity mismatch")
+    prefixes = approved_prefixes(config)
+    for entry in entries:
+        urls = catalog["channels"][entry.channel_id]
+        if not isinstance(urls, list) or not 1 <= len(urls) <= 9:
+            raise ValueError("Invalid fallback count")
+        for url in urls:
+            validate_url(url)
+            if url != entry.url and not any(url.startswith(prefix) for prefix in prefixes[entry.channel_id]):
+                raise ValueError("Unapproved fallback origin or channel path")
+
+
 def publish(directory):
     original = (ROOT / "playlist.m3u8").read_bytes()
     report = json.loads((directory / "report.json").read_text(encoding="utf-8"))
@@ -384,10 +431,15 @@ def publish(directory):
         raise ValueError("Too many changes")
     if updated.splitlines() != expected_lines:
         raise ValueError("Artifact contains non-URL changes")
+    catalog_bytes = (directory / "playlist-fallbacks.json").read_bytes()
+    if digest(catalog_bytes) != report["catalog_sha256"]:
+        raise ValueError("Fallback catalog digest mismatch")
+    validate_catalog(json.loads(catalog_bytes), after, config)
     if changes:
         temporary = ROOT / "playlist.m3u8.tmp"
         temporary.write_text(updated, encoding="utf-8", newline="\n")
         os.replace(temporary, ROOT / "playlist.m3u8")
+    (ROOT / "playlist-fallbacks.json").write_bytes(catalog_bytes)
     health = {"checked_on": report["checked_at"][:10], "channels": report["channels"], "source_errors": report["source_errors"]}
     (ROOT / "playlist-health.json").write_text(json.dumps(health, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
@@ -398,7 +450,19 @@ def main():
     parser.add_argument("--publish", type=Path)
     parser.add_argument("--channel", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--feed", help=argparse.SUPPRESS)
+    parser.add_argument("--seed-catalog", type=Path, help="Create a bundled catalog from configured sources only")
+    parser.add_argument("--seed-feed", type=Path, action="append", default=[], help="Reviewed local feed snapshots for a bundled catalog")
     args = parser.parse_args()
+    if args.seed_catalog:
+        config = json.loads((ROOT / "playlist-sources.json").read_text(encoding="utf-8"))
+        candidates = {key: list(urls) for key, urls in config["channels"].items()}
+        for feed in args.seed_feed:
+            found = candidates_from_feed(feed.read_text(encoding="utf-8-sig"), approved_prefixes(config), config.get("aliases"))
+            for key, urls in found.items():
+                candidates[key].extend(urls)
+        catalog = make_catalog((ROOT / "playlist.m3u8").read_text(encoding="utf-8"), candidates, config)
+        args.seed_catalog.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+        return
     if args.feed:
         body, _ = fetch(args.feed)
         sys.stdout.buffer.write(base64.b64encode(body))
@@ -422,8 +486,12 @@ def main():
     updated, channels = repaired_playlist(original.decode("utf-8-sig"), candidates, None, channel_worker=bounded_channel)
     args.output.mkdir(parents=True, exist_ok=True)
     (args.output / "playlist.m3u8").write_text(updated, encoding="utf-8", newline="\n")
+    catalog = make_catalog(updated, candidates, config)
+    catalog_bytes = (json.dumps(catalog, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    (args.output / "playlist-fallbacks.json").write_bytes(catalog_bytes)
     report = {"checked_at": datetime.now(timezone.utc).isoformat(), "base_sha256": digest(original),
-              "policy_sha256": policy_digests(), "source_errors": source_errors, "channels": channels}
+              "policy_sha256": policy_digests(), "catalog_sha256": digest(catalog_bytes),
+              "source_errors": source_errors, "channels": channels}
     (args.output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     summary = "# Playlist health\n\n| Channel ID | Status | Reason |\n|---|---|---|\n"
     for channel in channels:

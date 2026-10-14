@@ -12,13 +12,15 @@ android {
         applicationId = "com.zziirt.ztv"
         minSdk = 23
         targetSdk = 35
-        versionCode = 12
-        versionName = "0.1.11"
+        versionCode = 13
+        versionName = "0.1.12"
     }
 
     buildFeatures {
         compose = true
     }
+
+    sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/fallbackAssets"))
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -65,3 +67,11 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     inputs.file(defaultPlaylist)
     systemProperty("ztv.defaultPlaylist", defaultPlaylist.absolutePath)
 }
+
+val bundleFallbackCatalog by tasks.registering(Copy::class) {
+    from(rootProject.file("playlist-fallbacks.json"))
+    from(rootProject.file("playlist.m3u8"))
+    into(layout.buildDirectory.dir("generated/fallbackAssets"))
+}
+
+tasks.named("preBuild").configure { dependsOn(bundleFallbackCatalog) }

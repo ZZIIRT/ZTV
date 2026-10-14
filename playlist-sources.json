@@ -3,8 +3,13 @@
     "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/ru.m3u",
     "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_russia.m3u8"
   ],
+  "aliases": {"Match.ru": "MatchTV.ru", "5Kanal.ru": "Channel5.ru"},
   "discovery_prefixes": {
     "ChannelOne.ru": ["https://stream8.cinerama.uz/1214/"],
+    "MatchTV.ru": ["https://streaming.televizor-24-tochka.ru/live/6.m3u8"],
+    "Channel5.ru": ["https://streaming.televizor-24-tochka.ru/live/8.m3u8"],
+    "OTR.ru": ["https://streaming.televizor-24-tochka.ru/live/12.m3u8"],
+    "RBKTV.ru": ["http://92.50.128.180/utv/1358/"],
     "Russia1.ru": ["https://stream8.cinerama.uz/1020/"],
     "NTV.ru": ["https://cdn-dvr.ntv.ru/ntv0_hd/", "https://stream8.cinerama.uz/1023/", "http://ott-cdn.ucom.am/s17/"],
     "RussiaK.ru": ["https://stream8.cinerama.uz/1048/"],
