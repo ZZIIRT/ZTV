@@ -9,40 +9,40 @@
       "https://live.smotrim.ru/vgtrk/0/russia1-hd/792000_576p.m3u8",
       "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia1-hd/792000_576p.m3u8",
       "https://stream.smotrim.ru/hls2/russia_hd/playlist_6.m3u8",
-      "https://live.smotrim.ru/vgtrk/0/russia1-hd/index.m3u8",
-      "https://stream8.cinerama.uz/1020/tracks-v1a1/mono.m3u8"
+      "https://stream8.cinerama.uz/1020/tracks-v1a1/mono.m3u8",
+      "https://live.smotrim.ru/vgtrk/0/russia1-hd/index.m3u8"
     ],
     "MatchTV.ru": [
       "https://zabava-htlive.cdn.ngenix.net/hls/CH_MATCHTV/variant.m3u8",
       "https://streaming.televizor-24-tochka.ru/live/6.m3u8"
     ],
     "NTV.ru": [
+      "https://stream8.cinerama.uz/1023/tracks-v1a1/mono.m3u8",
       "https://cdn.ntv.ru/ntv0/playlist.m3u8",
       "https://zabava-htlive.cdn.ngenix.net/hls/CH_NTV/variant.m3u8",
-      "http://ott-cdn.ucom.am/s17/index.m3u8",
-      "https://stream8.cinerama.uz/1023/tracks-v1a1/mono.m3u8",
-      "https://cdn-dvr.ntv.ru/ntv0_hd/index.m3u8"
+      "https://cdn-dvr.ntv.ru/ntv0_hd/index.m3u8",
+      "http://ott-cdn.ucom.am/s17/index.m3u8"
     ],
     "Channel5.ru": [
       "https://zabava-htlive.cdn.ngenix.net/hls/CH_5TV/variant.m3u8",
       "https://streaming.televizor-24-tochka.ru/live/8.m3u8"
     ],
     "RussiaK.ru": [
-      "https://live.smotrim.ru/vgtrk/0/kultura-hd/index.m3u8",
+      "https://stream8.cinerama.uz/1048/tracks-v1a1/mono.m3u8",
       "https://live.smotrim.ru/vgtrk/0/kultura-hd/792000_576p.m3u8",
       "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/kultura-hd/index.m3u8",
       "https://stream.smotrim.ru/hls2/russia_k/playlist_5.m3u8",
-      "https://stream8.cinerama.uz/1048/tracks-v1a1/mono.m3u8"
+      "https://live.smotrim.ru/vgtrk/0/kultura-hd/index.m3u8"
     ],
     "Russia24.ru": [
       "https://live.smotrim.ru/vgtrk/0/russia24-hd/792000_576p.m3u8",
       "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia24-hd/792000_576p.m3u8",
       "https://stream.smotrim.ru/hls2/russia24nl_smotrim/playlist_5.m3u8",
-      "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia24-hd/1080p.m3u8",
-      "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia24-hd/720p.m3u8",
       "https://stream8.cinerama.uz/1021/tracks-v1a1/mono.m3u8",
       "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia24-hd/index.m3u8",
-      "https://live.smotrim.ru/vgtrk/0/russia24-hd/index.m3u8"
+      "https://live.smotrim.ru/vgtrk/0/russia24-hd/index.m3u8",
+      "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia24-hd/1080p.m3u8",
+      "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia24-hd/720p.m3u8"
     ],
     "Carousel.ru": [
       "https://streaming102.interskytech.com/live/232.m3u8",
@@ -54,10 +54,10 @@
       "https://streaming.televizor-24-tochka.ru/live/12.m3u8"
     ],
     "TVCentr.ru": [
+      "https://stream8.cinerama.uz/1025/tracks-v1a1/mono.m3u8",
       "https://tvc-hls.cdnvideo.ru/tvc-res/smil:vd9221.smil/playlist.m3u8",
       "https://zabava-htlive.cdn.ngenix.net/hls/CH_TVC/variant.m3u8",
-      "http://ott-cdn.ucom.am/s54/index.m3u8",
-      "https://stream8.cinerama.uz/1025/tracks-v1a1/mono.m3u8"
+      "http://ott-cdn.ucom.am/s54/index.m3u8"
     ],
     "RENTV.ru": [
       "https://zabava-htlive.cdn.ngenix.net/hls/CH_RENTV/variant.m3u8",
