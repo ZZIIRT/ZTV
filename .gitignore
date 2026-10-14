@@ -10,3 +10,4 @@ app/build/
 .android-sdk/
 .android-sdk-download/
 .Codex/
+__pycache__/

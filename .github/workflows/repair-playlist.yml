@@ -1,0 +1,80 @@
+name: Repair playlist
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'playlist.m3u8'
+      - 'playlist-sources.json'
+      - 'scripts/**'
+      - '.github/workflows/repair-playlist.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playlist-repair
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - name: Install media tools and locked HLS parser
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install --require-hashes --only-binary=:all: -r scripts/requirements.txt
+      - name: Test failover and publication rules
+        run: python -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Verify channels and find working replacements
+        run: python scripts/repair_playlist.py --output "$RUNNER_TEMP/playlist-repair"
+      - name: Health summary
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/playlist-repair/summary.md" ]; then
+            cat "$RUNNER_TEMP/playlist-repair/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: verified-playlist
+          path: ${{ runner.temp }}/playlist-repair/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: main
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: verified-playlist
+          path: ${{ runner.temp }}/playlist-repair/
+      - name: Validate artifact against the current main playlist
+        run: python3 scripts/repair_playlist.py --publish "$RUNNER_TEMP/playlist-repair"
+      - name: Commit only verified playlist and daily health report
+        run: |
+          git add -- playlist.m3u8 playlist-health.json
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'Maintain verified TV playlist'
+            git push origin HEAD:main
+          fi

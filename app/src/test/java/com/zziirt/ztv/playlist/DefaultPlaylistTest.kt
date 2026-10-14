@@ -40,16 +40,15 @@ class DefaultPlaylistTest {
         )
         assertEquals((1..20).toList(), channels.map { it.number })
         assertEquals(
-            "https://zabava-htlive.cdn.ngenix.net/hls/CH_1TVSD/variant.m3u8",
-            channels.single { it.name == "Первый канал" }.url,
+            listOf(
+                "ChannelOne.ru", "Russia1.ru", "MatchTV.ru", "NTV.ru", "Channel5.ru",
+                "RussiaK.ru", "Russia24.ru", "Carousel.ru", "OTR.ru", "TVCentr.ru",
+                "RENTV.ru", "Spas.ru", "STS.ru", "Domashniy.ru", "TV3.ru",
+                "Friday.ru", "Zvezda.ru", "Mir.ru", "TNT.ru", "RBKTV.ru",
+            ),
+            channels.map { it.tvgId },
         )
-        assertEquals(
-            "https://live.smotrim.ru/vgtrk/0/russia1-hd/792000_576p.m3u8",
-            channels.single { it.name == "Россия 1" }.url,
-        )
-        assertEquals(
-            "https://live.smotrim.ru/vgtrk/0/russia24-hd/792000_576p.m3u8",
-            channels.single { it.name == "Россия-24" }.url,
-        )
+        assertTrue(channels.all { it.url.startsWith("https://") || it.url.startsWith("http://") })
+        assertTrue(channels.all { it.url.substringBefore('?').endsWith(".m3u8") })
     }
 }
