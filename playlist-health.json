@@ -1,0 +1,106 @@
+{
+  "checked_on": "2026-10-14",
+  "channels": [
+    {
+      "id": "ChannelOne.ru",
+      "status": "unresolved",
+      "reason": "not_live"
+    },
+    {
+      "id": "Russia1.ru",
+      "status": "healthy",
+      "reason": "ok"
+    },
+    {
+      "id": "MatchTV.ru",
+      "status": "unresolved",
+      "reason": "not_live"
+    },
+    {
+      "id": "NTV.ru",
+      "status": "healthy",
+      "reason": "ok"
+    },
+    {
+      "id": "Channel5.ru",
+      "status": "unresolved",
+      "reason": "not_live"
+    },
+    {
+      "id": "RussiaK.ru",
+      "status": "unresolved",
+      "reason": "mass_failure_guard"
+    },
+    {
+      "id": "Russia24.ru",
+      "status": "healthy",
+      "reason": "ok"
+    },
+    {
+      "id": "Carousel.ru",
+      "status": "transient",
+      "reason": "ok"
+    },
+    {
+      "id": "OTR.ru",
+      "status": "unresolved",
+      "reason": "not_live"
+    },
+    {
+      "id": "TVCentr.ru",
+      "status": "unresolved",
+      "reason": "mass_failure_guard"
+    },
+    {
+      "id": "RENTV.ru",
+      "status": "unresolved",
+      "reason": "not_live"
+    },
+    {
+      "id": "Spas.ru",
+      "status": "unresolved",
+      "reason": "mass_failure_guard"
+    },
+    {
+      "id": "STS.ru",
+      "status": "unresolved",
+      "reason": "not_live"
+    },
+    {
+      "id": "Domashniy.ru",
+      "status": "unresolved",
+      "reason": "not_live"
+    },
+    {
+      "id": "TV3.ru",
+      "status": "unresolved",
+      "reason": "not_live"
+    },
+    {
+      "id": "Friday.ru",
+      "status": "unresolved",
+      "reason": "not_live"
+    },
+    {
+      "id": "Zvezda.ru",
+      "status": "healthy",
+      "reason": "ok"
+    },
+    {
+      "id": "Mir.ru",
+      "status": "unresolved",
+      "reason": "mass_failure_guard"
+    },
+    {
+      "id": "TNT.ru",
+      "status": "unresolved",
+      "reason": "not_live"
+    },
+    {
+      "id": "RBKTV.ru",
+      "status": "unresolved",
+      "reason": "signed_or_authenticated_url"
+    }
+  ],
+  "source_errors": []
+}
