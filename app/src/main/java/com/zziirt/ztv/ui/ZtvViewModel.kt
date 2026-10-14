@@ -46,6 +46,7 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
         context = application,
         onReady = ::onPlayerReady,
         onError = ::onPlaybackFailed,
+        onBuffering = ::onPlayerBuffering,
     )
 
     init {
@@ -312,6 +313,11 @@ class ZtvViewModel(application: Application) : AndroidViewModel(application) {
                 onPlaybackFailed(generation, "Канал временно недоступен")
             }
         }
+    }
+
+    private fun onPlayerBuffering(playbackId: Long) {
+        if (playbackId != playGeneration) return
+        _uiState.value.currentChannel?.let { scheduleTimeout(it, playbackId) }
     }
 
     private fun onPlayerReady(playbackId: Long) {

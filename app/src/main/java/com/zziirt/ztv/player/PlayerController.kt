@@ -9,6 +9,7 @@ class PlayerController(
     context: Context,
     private val onReady: (Long) -> Unit,
     private val onError: (Long, String) -> Unit,
+    private val onBuffering: (Long) -> Unit = {},
 ) {
     val tvPlayer = TvPlayer(context)
     private var activePlaybackId = 0L
@@ -20,6 +21,8 @@ class PlayerController(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
                     onReady(tvPlayer.currentPlaybackId() ?: activePlaybackId)
+                } else if (playbackState == Player.STATE_BUFFERING && activeChannel != null) {
+                    onBuffering(tvPlayer.currentPlaybackId() ?: activePlaybackId)
                 } else if (playbackState == Player.STATE_ENDED && activeChannel != null) {
                     onError(tvPlayer.currentPlaybackId() ?: activePlaybackId, "Источник завершил трансляцию")
                 }
