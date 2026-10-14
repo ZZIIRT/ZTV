@@ -3,8 +3,8 @@
   "channels": [
     {
       "id": "ChannelOne.ru",
-      "status": "unresolved",
-      "reason": "not_live"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "Russia1.ru",
@@ -13,23 +13,25 @@
     },
     {
       "id": "MatchTV.ru",
-      "status": "unresolved",
-      "reason": "not_live"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "NTV.ru",
-      "status": "healthy",
-      "reason": "ok"
+      "status": "replaced",
+      "reason": "network_or_decode_error",
+      "url": "https://stream8.cinerama.uz/1023/tracks-v1a1/mono.m3u8"
     },
     {
       "id": "Channel5.ru",
-      "status": "unresolved",
-      "reason": "not_live"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "RussiaK.ru",
-      "status": "unresolved",
-      "reason": "mass_failure_guard"
+      "status": "replaced",
+      "reason": "stale_segment",
+      "url": "https://stream8.cinerama.uz/1048/tracks-v1a1/mono.m3u8"
     },
     {
       "id": "Russia24.ru",
@@ -38,48 +40,49 @@
     },
     {
       "id": "Carousel.ru",
-      "status": "transient",
+      "status": "healthy",
       "reason": "ok"
     },
     {
       "id": "OTR.ru",
-      "status": "unresolved",
-      "reason": "not_live"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "TVCentr.ru",
-      "status": "unresolved",
-      "reason": "mass_failure_guard"
+      "status": "replaced",
+      "reason": "no_compatible_variant",
+      "url": "https://stream8.cinerama.uz/1025/tracks-v1a1/mono.m3u8"
     },
     {
       "id": "RENTV.ru",
-      "status": "unresolved",
-      "reason": "not_live"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "Spas.ru",
-      "status": "unresolved",
-      "reason": "mass_failure_guard"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "STS.ru",
-      "status": "unresolved",
-      "reason": "not_live"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "Domashniy.ru",
-      "status": "unresolved",
-      "reason": "not_live"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "TV3.ru",
-      "status": "unresolved",
-      "reason": "not_live"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "Friday.ru",
-      "status": "unresolved",
-      "reason": "not_live"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "Zvezda.ru",
@@ -88,18 +91,18 @@
     },
     {
       "id": "Mir.ru",
-      "status": "unresolved",
-      "reason": "mass_failure_guard"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "TNT.ru",
-      "status": "unresolved",
-      "reason": "not_live"
+      "status": "restricted",
+      "reason": "restricted"
     },
     {
       "id": "RBKTV.ru",
       "status": "unresolved",
-      "reason": "signed_or_authenticated_url"
+      "reason": "change_limit"
     }
   ],
   "source_errors": []
