@@ -18,9 +18,8 @@
     },
     {
       "id": "NTV.ru",
-      "status": "replaced",
-      "reason": "network_or_decode_error",
-      "url": "https://stream8.cinerama.uz/1023/tracks-v1a1/mono.m3u8"
+      "status": "healthy",
+      "reason": "ok"
     },
     {
       "id": "Channel5.ru",
@@ -29,9 +28,8 @@
     },
     {
       "id": "RussiaK.ru",
-      "status": "replaced",
-      "reason": "stale_segment",
-      "url": "https://stream8.cinerama.uz/1048/tracks-v1a1/mono.m3u8"
+      "status": "healthy",
+      "reason": "ok"
     },
     {
       "id": "Russia24.ru",
@@ -50,9 +48,8 @@
     },
     {
       "id": "TVCentr.ru",
-      "status": "replaced",
-      "reason": "no_compatible_variant",
-      "url": "https://stream8.cinerama.uz/1025/tracks-v1a1/mono.m3u8"
+      "status": "healthy",
+      "reason": "ok"
     },
     {
       "id": "RENTV.ru",
@@ -101,8 +98,9 @@
     },
     {
       "id": "RBKTV.ru",
-      "status": "unresolved",
-      "reason": "change_limit"
+      "status": "replaced",
+      "reason": "no_compatible_variant",
+      "url": "http://92.50.128.180/utv/1358/index.m3u8"
     }
   ],
   "source_errors": []
