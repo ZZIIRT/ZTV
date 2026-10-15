@@ -8,7 +8,7 @@
     },
     {
       "id": "Russia1.ru",
-      "status": "healthy",
+      "status": "transient",
       "reason": "ok"
     },
     {
