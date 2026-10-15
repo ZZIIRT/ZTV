@@ -1,5 +1,5 @@
 {
-  "checked_on": "2026-10-14",
+  "checked_on": "2026-10-15",
   "channels": [
     {
       "id": "ChannelOne.ru",
@@ -98,9 +98,8 @@
     },
     {
       "id": "RBKTV.ru",
-      "status": "replaced",
-      "reason": "no_compatible_variant",
-      "url": "http://92.50.128.180/utv/1358/index.m3u8"
+      "status": "healthy",
+      "reason": "ok"
     }
   ],
   "source_errors": []
