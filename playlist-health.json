@@ -98,8 +98,8 @@
     },
     {
       "id": "RBKTV.ru",
-      "status": "healthy",
-      "reason": "ok"
+      "status": "restricted",
+      "reason": "restricted"
     }
   ],
   "source_errors": []
