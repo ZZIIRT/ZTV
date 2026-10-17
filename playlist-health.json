@@ -48,8 +48,8 @@
     },
     {
       "id": "TVCentr.ru",
-      "status": "unresolved",
-      "reason": "http_404"
+      "status": "healthy",
+      "reason": "ok"
     },
     {
       "id": "RENTV.ru",
@@ -83,8 +83,8 @@
     },
     {
       "id": "Zvezda.ru",
-      "status": "unresolved",
-      "reason": "network_or_decode_error"
+      "status": "healthy",
+      "reason": "ok"
     },
     {
       "id": "Mir.ru",
