@@ -28,8 +28,8 @@
     },
     {
       "id": "RussiaK.ru",
-      "status": "unresolved",
-      "reason": "no_compatible_video"
+      "status": "healthy",
+      "reason": "ok"
     },
     {
       "id": "Russia24.ru",
