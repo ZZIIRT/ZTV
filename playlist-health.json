@@ -18,8 +18,9 @@
     },
     {
       "id": "NTV.ru",
-      "status": "healthy",
-      "reason": "ok"
+      "status": "replaced",
+      "reason": "network_or_decode_error",
+      "url": "https://cdn-dvr.ntv.ru/ntv0_hd/tracks-v2a1/mono.ts.m3u8"
     },
     {
       "id": "Channel5.ru",
@@ -28,8 +29,8 @@
     },
     {
       "id": "RussiaK.ru",
-      "status": "healthy",
-      "reason": "ok"
+      "status": "unresolved",
+      "reason": "network_or_decode_error"
     },
     {
       "id": "Russia24.ru",
@@ -48,8 +49,8 @@
     },
     {
       "id": "TVCentr.ru",
-      "status": "healthy",
-      "reason": "ok"
+      "status": "unresolved",
+      "reason": "network_or_decode_error"
     },
     {
       "id": "RENTV.ru",
