@@ -18,7 +18,7 @@
     },
     {
       "id": "NTV.ru",
-      "status": "healthy",
+      "status": "transient",
       "reason": "ok"
     },
     {
