@@ -18,8 +18,9 @@
     },
     {
       "id": "NTV.ru",
-      "status": "healthy",
-      "reason": "ok"
+      "status": "replaced",
+      "reason": "network_or_decode_error",
+      "url": "https://stream8.cinerama.uz/1023/tracks-v1a1/mono.m3u8"
     },
     {
       "id": "Channel5.ru",
