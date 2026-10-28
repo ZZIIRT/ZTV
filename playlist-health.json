@@ -1,5 +1,5 @@
 {
-  "checked_on": "2026-10-27",
+  "checked_on": "2026-10-28",
   "channels": [
     {
       "id": "ChannelOne.ru",
@@ -38,7 +38,7 @@
     },
     {
       "id": "Carousel.ru",
-      "status": "transient",
+      "status": "healthy",
       "reason": "ok"
     },
     {
