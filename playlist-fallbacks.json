@@ -90,8 +90,8 @@
     "Mir.ru": [
       "https://zabava-htlive.cdn.ngenix.net/hls/CH_MIR/variant.m3u8",
       "http://hls.mirtv.cdnvideo.ru/mirtv-parampublish/mirtv_2500/playlist.m3u8",
-      "https://tvcdn01.oktv.kz/tv/mir/index.m3u8",
-      "https://stream8.cinerama.uz/1218/tracks-v1a1/mono.m3u8"
+      "https://stream8.cinerama.uz/1218/tracks-v1a1/mono.m3u8",
+      "https://tvcdn01.oktv.kz/tv/mir/index.m3u8"
     ],
     "TNT.ru": [
       "https://zabava-htlive.cdn.ngenix.net/hls/CH_TNT/variant.m3u8",
