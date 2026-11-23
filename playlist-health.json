@@ -28,8 +28,8 @@
     },
     {
       "id": "RussiaK.ru",
-      "status": "unresolved",
-      "reason": "no_compatible_variant"
+      "status": "healthy",
+      "reason": "ok"
     },
     {
       "id": "Russia24.ru",
@@ -48,8 +48,8 @@
     },
     {
       "id": "TVCentr.ru",
-      "status": "unresolved",
-      "reason": "no_compatible_variant"
+      "status": "healthy",
+      "reason": "ok"
     },
     {
       "id": "RENTV.ru",
@@ -102,7 +102,5 @@
       "reason": "restricted"
     }
   ],
-  "source_errors": [
-    "/iptv-org/iptv/master/streams/ru.m3u"
-  ]
+  "source_errors": []
 }
