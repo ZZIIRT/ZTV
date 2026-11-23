@@ -2,14 +2,12 @@
   "schema": 1,
   "channels": {
     "ChannelOne.ru": [
-      "https://zabava-htlive.cdn.ngenix.net/hls/CH_1TVSD/variant.m3u8",
-      "https://stream8.cinerama.uz/1214/tracks-v1a1/mono.m3u8"
+      "https://zabava-htlive.cdn.ngenix.net/hls/CH_1TVSD/variant.m3u8"
     ],
     "Russia1.ru": [
       "https://live.smotrim.ru/vgtrk/0/russia1-hd/792000_576p.m3u8",
       "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia1-hd/792000_576p.m3u8",
       "https://stream.smotrim.ru/hls2/russia_hd/playlist_6.m3u8",
-      "https://stream8.cinerama.uz/1020/tracks-v1a1/mono.m3u8",
       "https://live.smotrim.ru/vgtrk/0/russia1-hd/index.m3u8"
     ],
     "MatchTV.ru": [
@@ -20,7 +18,6 @@
       "https://stream8.cinerama.uz/1023/tracks-v1a1/mono.m3u8",
       "https://cdn.ntv.ru/ntv0/playlist.m3u8",
       "https://zabava-htlive.cdn.ngenix.net/hls/CH_NTV/variant.m3u8",
-      "https://cdn-dvr.ntv.ru/ntv0_hd/index.m3u8",
       "http://ott-cdn.ucom.am/s17/index.m3u8"
     ],
     "Channel5.ru": [
@@ -38,10 +35,6 @@
       "https://live.smotrim.ru/vgtrk/0/russia24-hd/792000_576p.m3u8",
       "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia24-hd/792000_576p.m3u8",
       "https://stream.smotrim.ru/hls2/russia24nl_smotrim/playlist_5.m3u8",
-      "https://stream8.cinerama.uz/1021/tracks-v1a1/mono.m3u8",
-      "https://live.smotrim.ru/vgtrk/0/russia24-hd/1080p.m3u8",
-      "https://live.smotrim.ru/vgtrk/0/russia24-hd/index.m3u8",
-      "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia24-hd/index.m3u8",
       "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia24-hd/1080p.m3u8",
       "https://vgtrkregion-reg.cdnvideo.ru/vgtrk/0/russia24-hd/720p.m3u8"
     ],
@@ -80,18 +73,14 @@
       "https://streaming.televizor-24-tochka.ru/live/18.m3u8"
     ],
     "Friday.ru": [
-      "https://zabava-htlive.cdn.ngenix.net/hls/CH_PYATNIZZA/variant.m3u8",
-      "https://vod.tuva.ru/friday/index.m3u8"
+      "https://zabava-htlive.cdn.ngenix.net/hls/CH_PYATNIZZA/variant.m3u8"
     ],
     "Zvezda.ru": [
-      "https://tvchannelstream1.tvzvezda.ru/cdn/tvzvezda/playlist.m3u8",
-      "https://stream8.cinerama.uz/1050/tracks-v1a1/mono.m3u8"
+      "https://tvchannelstream1.tvzvezda.ru/cdn/tvzvezda/playlist.m3u8"
     ],
     "Mir.ru": [
       "https://zabava-htlive.cdn.ngenix.net/hls/CH_MIR/variant.m3u8",
-      "http://hls.mirtv.cdnvideo.ru/mirtv-parampublish/mirtv_2500/playlist.m3u8",
-      "https://stream8.cinerama.uz/1218/tracks-v1a1/mono.m3u8",
-      "https://tvcdn01.oktv.kz/tv/mir/index.m3u8"
+      "http://hls.mirtv.cdnvideo.ru/mirtv-parampublish/mirtv_2500/playlist.m3u8"
     ],
     "TNT.ru": [
       "https://zabava-htlive.cdn.ngenix.net/hls/CH_TNT/variant.m3u8",
